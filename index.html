@@ -6,7 +6,397 @@
     <title>AI Prank Chatbot</title>
     <style>
         * {
+            box-sizing: border-box;<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prank Chatbot</title>
+    <style>
+        * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background-color: #212121;
+            color: #ececf1;
+            display: flex;
+            height: 100vh;
+        }
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        /* Views */
+        .view {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+        .view.active {
+            display: flex;
+        }
+        /* Setup / Control Panel */
+        .setup-panel {
+            padding: 30px;
+            max-width: 500px;
+            margin: auto;
+            background: #2d2d2d;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .setup-panel h2 { margin-bottom: 20px; color: #10a37f; }
+        .setup-panel p { margin-bottom: 20px; font-size: 14px; color: #b4b4b4; }
+        .btn {
+            background-color: #10a37f;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: #1a7f64; }
+        .btn-secondary { background-color: #4f4f4f; }
+        .btn-secondary:hover { background-color: #656565; }
+
+        /* Shared Chat Styles */
+        .chat-header {
+            background: #202123;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            border-bottom: 1px solid #4d4d4f;
+            position: relative;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .message-row {
+            display: flex;
+            padding: 20px;
+            border-bottom: 1px solid #343541;
+        }
+        .message-row.user { background-color: #212121; }
+        .message-row.ai { background-color: #343541; }
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        .user .avatar { background-color: #543a3a; color: #ffbcbc; }
+        .ai .avatar { background-color: #10a37f; color: white; }
+        .message-text {
+            line-height: 1.5;
+            font-size: 15px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .chat-input-area {
+            padding: 20px;
+            background: linear-gradient(180deg, rgba(33,33,33,0), #212121 50%);
+            display: flex;
+            justify-content: center;
+        }
+        .input-wrapper {
+            position: relative;
+            max-width: 768px;
+            width: 100%;
+            display: flex;
+            background: #2f2f2f;
+            border-radius: 12px;
+            border: 1px solid #4f4f4f;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .chat-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            padding: 14px;
+            color: #ececf1;
+            font-size: 15px;
+            outline: none;
+            resize: none;
+            height: 52px;
+        }
+        .send-btn {
+            background: transparent;
+            border: none;
+            color: #8e8ea0;
+            padding: 0 15px;
+            cursor: pointer;
+        }
+        .send-btn.active { color: #10a37f; }
+
+        /* Admin / Pranker Specific Layout */
+        .admin-layout {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        .admin-sidebar {
+            width: 300px;
+            background: #171717;
+            border-right: 1px solid #2d2d2d;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .status-badge {
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .status-pending { background: #5c4308; color: #f5c042; }
+        .status-idle { background: #242424; color: #8e8ea0; }
+        .typing-indicator {
+            font-style: italic;
+            color: #8e8ea0;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        .nav-back {
+            position: absolute;
+            left: 15px;
+            top: 12px;
+            background: #4f4f4f;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 1. SETUP / ROUTING SCREEN -->
+        <div id="setupView" class="view active">
+            <div class="setup-panel">
+                <h2>AI Prank Hub</h2>
+                <p>To run this prank on a single device (like a laptop or an iPad), you can switch between views right here. Hand the <strong>Victim View</strong> to your friend, and use the <strong>Pranker Dashboard</strong> out of sight!</p>
+                <button class="btn" onclick="switchView('userView')">Go to Victim View (The "AI")</button>
+                <button class="btn btn-secondary" onclick="switchView('adminView')">Go to Pranker Dashboard</button>
+            </div>
+        </div>
+
+        <!-- 2. USER / VICTIM VIEW (The Fake AI) -->
+        <div id="userView" class="view">
+            <div class="chat-header">
+                <div class="nav-back" onclick="switchView('setupView')">⚙️ Setup</div>
+                ChatGPT 4.5 Omni
+            </div>
+            <div class="messages" id="userMessages">
+                <div class="message-row ai">
+                    <div class="avatar">AI</div>
+                    <div class="message-text">Hello! I am a highly advanced artificial intelligence model. How can I assist you with your day today?</div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <textarea class="chat-input" id="userInput" placeholder="Message ChatGPT..." oninput="toggleSendBtn('userInput', 'userSendBtn')"></textarea>
+                    <button class="send-btn" id="userSendBtn" onclick="submitUserMessage()">➔</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. ADMIN / PRANKER VIEW (The Puppet Master) -->
+        <div id="adminView" class="view">
+            <div class="admin-layout">
+                <div class="admin-sidebar">
+                    <h3>Pranker Control</h3>
+                    <div id="statusBadge" class="status-badge status-idle">Waiting for victim...</div>
+                    <div id="typingIndicator" class="typing-indicator"></div>
+                    <button class="btn btn-secondary" onclick="switchView('setupView')" style="margin: 20px 0 0 0; width: 100%;">Back to Main Hub</button>
+                    <button class="btn btn-secondary" onclick="clearChat()" style="margin: 10px 0 0 0; width: 100%; background: #5a2323;">Reset/Clear Chat</button>
+                </div>
+                
+                <div style="flex:1; display:flex; flex-direction:column; background:#212121;">
+                    <div class="chat-header">Live Prank Feed (What your friend sees)</div>
+                    <div class="messages" id="adminMessages"></div>
+                    <div class="chat-input-area">
+                        <div class="input-wrapper" style="border-color: #10a37f;">
+                            <textarea class="chat-input" id="adminInput" placeholder="Type your ridiculous 'AI' response here..." oninput="toggleSendBtn('adminInput', 'adminSendBtn')"></textarea>
+                            <button class="send-btn active" id="adminSendBtn" onclick="submitAdminResponse()">➔</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Use localStorage to synchronize between views/tabs instantly if opened on the same machine
+        const STORAGE_KEY = 'prank_chat_history';
+        const STATUS_KEY = 'prank_chat_status';
+
+        // Initialize state
+        if (!localStorage.getItem(STORAGE_KEY)) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([
+                { sender: 'ai', text: 'Hello! I am a highly advanced artificial intelligence model. How can I assist you with your day today?' }
+            ]));
+        }
+        if (!localStorage.getItem(STATUS_KEY)) {
+            localStorage.setItem(STATUS_KEY, JSON.stringify({ typing: false, awaitingReply: false }));
+        }
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            renderChats();
+        }
+
+        function toggleSendBtn(inputId, btnId) {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(btnId);
+            if (input.value.trim().length > 0) {
+                btn.classList.add('active');
+                if (inputId === 'userInput') {
+                    updateStatus(true, false);
+                }
+            } else {
+                btn.classList.remove('active');
+                if (inputId === 'userInput') {
+                    updateStatus(false, false);
+                }
+            }
+        }
+
+        function updateStatus(isTyping, awaitingReply) {
+            const status = JSON.parse(localStorage.getItem(STATUS_KEY)) || {};
+            if (isTyping !== undefined) status.typing = isTyping;
+            if (awaitingReply !== undefined) status.awaitingReply = awaitingReply;
+            localStorage.setItem(STATUS_KEY, JSON.stringify(status));
+        }
+
+        function submitUserMessage() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const history = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            history.push({ sender: 'user', text: text });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+
+            input.value = '';
+            toggleSendBtn('userInput', 'userSendBtn');
+            updateStatus(false, true); // No longer typing, now awaiting admin reply
+            renderChats();
+        }
+
+        function submitAdminResponse() {
+            const input = document.getElementById('adminInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const history = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            history.push({ sender: 'ai', text: text });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+
+            input.value = '';
+            toggleSendBtn('adminInput', 'adminSendBtn');
+            updateStatus(false, false); // Admin replied, reset status
+            renderChats();
+        }
+
+        function clearChat() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([
+                { sender: 'ai', text: 'Hello! I am a highly advanced artificial intelligence model. How can I assist you with your day today?' }
+            ]));
+            localStorage.setItem(STATUS_KEY, JSON.stringify({ typing: false, awaitingReply: false }));
+            renderChats();
+        }
+
+        function renderChats() {
+            const history = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            const status = JSON.parse(localStorage.getItem(STATUS_KEY)) || { typing: false, awaitingReply: false };
+
+            // Render User View
+            const userMessages = document.getElementById('userMessages');
+            userMessages.innerHTML = '';
+            history.forEach(msg => {
+                const row = document.createElement('div');
+                row.className = `message-row ${msg.sender}`;
+                row.innerHTML = `
+                    <div class="avatar">${msg.sender === 'ai' ? 'AI' : 'You'}</div>
+                    <div class="message-text">${escapeHTML(msg.text)}</div>
+                `;
+                userMessages.appendChild(row);
+            });
+            userMessages.scrollTop = userMessages.scrollHeight;
+
+            // Render Admin View
+            const adminMessages = document.getElementById('adminMessages');
+            adminMessages.innerHTML = '';
+            history.forEach(msg => {
+                const row = document.createElement('div');
+                row.className = `message-row ${msg.sender}`;
+                row.innerHTML = `
+                    <div class="avatar">${msg.sender === 'ai' ? 'AI' : 'Victim'}</div>
+                    <div class="message-text">${escapeHTML(msg.text)}</div>
+                `;
+                adminMessages.appendChild(row);
+            });
+            adminMessages.scrollTop = adminMessages.scrollHeight;
+
+            // Update Admin Sidebar Status Labels
+            const badge = document.getElementById('statusBadge');
+            const indicator = document.getElementById('typingIndicator');
+
+            if (status.awaitingReply) {
+                badge.textContent = "NEW PROMPT RECEIVED!";
+                badge.className = "status-badge status-pending";
+            } else {
+                badge.textContent = "Waiting for victim...";
+                badge.className = "status-badge status-idle";
+            }
+
+            if (status.typing) {
+                indicator.textContent = "Victim is typing a prompt...";
+            } else {
+                indicator.textContent = "";
+            }
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        // Listen for storage changes across windows/tabs to allow multi-device/multi-tab syncing on same machine
+        window.addEventListener('storage', renderChats);
+
+        // Initial paint
+        renderChats();
+
+        // Polling fallback to keep layout perfectly snappy in a single split window
+        setInterval(renderChats, 800);
+    </script>
+</body>
+</html>
+
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
