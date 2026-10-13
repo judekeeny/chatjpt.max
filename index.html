@@ -6,8 +6,6 @@
     <title>ChatGPT</title>
     <!-- Tailwind CSS for modern AI chat UI styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- MQTT library for real-time mesh messaging -->
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -39,7 +37,7 @@
                         <span>Settings</span>
                     </div>
                 </div>
-                <div class="p-2 text-xs text-gray-400 hover:bg-[#212121] rounded-lg cursor-pointer flex items-center gap-2">
+                <div id="profileTrigger" class="p-2 text-xs text-gray-400 hover:bg-[#212121] rounded-lg cursor-pointer flex items-center gap-2">
                     <div class="w-7 h-7 rounded-full bg-emerald-700 flex items-center justify-center text-white font-semibold">U</div>
                     <span class="truncate font-medium">User Profile</span>
                 </div>
@@ -50,9 +48,22 @@
         <div class="flex-1 flex flex-col h-full relative bg-[#212121]">
             <!-- Top Nav Bar -->
             <div class="h-14 flex items-center justify-between px-4 border-b border-white/5 text-sm font-semibold text-gray-400">
-                <div class="flex items-center gap-2 cursor-pointer hover:text-white">
-                    <span>ChatGPT 4o</span>
-                    <span class="text-xs text-gray-500">▼</span>
+                <div class="relative">
+                    <div id="modelMenuTrigger" class="flex items-center gap-2 cursor-pointer hover:text-white">
+                        <span id="activeModelLabel">ChatGPT 4o</span>
+                        <span class="text-xs text-gray-500">▼</span>
+                    </div>
+                    <div id="modelMenu" class="hidden absolute left-0 top-full mt-2 w-44 rounded-xl border border-white/10 bg-[#1f1f1f] shadow-2xl z-40 overflow-hidden">
+                        <button class="model-option block w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5" data-model="ChatGPT 4o">ChatGPT 4o</button>
+                        <button class="model-option block w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5" data-model="GPT-4.1">GPT-4.1</button>
+                        <button class="model-option block w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5" data-model="o3-mini">o3-mini</button>
+                        <button class="model-option block w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5" data-model="GPT-4o mini">GPT-4o mini</button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.18em] text-gray-300">
+                        Room <span id="roomBadge">10000</span>
+                    </span>
                 </div>
             </div>
 
@@ -112,6 +123,39 @@
         </div>
     </div>
 
+    <div id="profileModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-[#2f2f2f] w-full max-w-md rounded-2xl p-6 border border-white/10 shadow-2xl relative font-sans">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">User Profile</h3>
+                <button id="closeProfileBtn" class="text-gray-400 hover:text-white text-lg">×</button>
+            </div>
+            <div class="flex items-center gap-4 pb-4 border-b border-white/5 mb-4">
+                <div class="w-14 h-14 rounded-full bg-emerald-700 flex items-center justify-center text-white font-semibold text-xl">U</div>
+                <div>
+                    <div class="text-white font-medium">User</div>
+                    <div class="text-xs text-gray-400">user@example.com</div>
+                </div>
+            </div>
+            <div class="space-y-3 text-sm text-gray-300">
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-gray-400">Plan</span>
+                    <span>ChatGPT Plus</span>
+                </div>
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-gray-400">Model</span>
+                    <span id="profileModelValue">ChatGPT 4o</span>
+                </div>
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-gray-400">Region</span>
+                    <span>United States</span>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button class="bg-white/10 hover:bg-white/20 text-white text-xs font-medium px-4 py-2 rounded-xl transition">Manage account</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== PRANKER DASHBOARD (HIDDEN MATRIX) ==================== -->
     <div id="prankerDashboard" class="hidden fixed inset-0 bg-[#0B0F19] text-gray-100 flex flex-col z-50 font-mono">
         <!-- Dashboard Top Header Bar -->
@@ -153,10 +197,27 @@
 
                 <div class="space-y-3 pt-4 border-t border-gray-800">
                     <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest pb-1">Macro Quick Responses</h4>
-                    <div class="grid grid-cols-1 gap-2">
+                    <div class="grid grid-cols-1 gap-2 max-h-[420px] overflow-y-auto no-scrollbar pr-1">
                         <button onclick="sendPreset('As an AI language model, I am legally obligated to tell you that someone is standing right behind you.')" class="text-left bg-[#1F2937] hover:bg-red-900/30 text-xs p-2 rounded border border-gray-700 hover:border-red-700 text-gray-300 transition truncate">⚠️ Behind You</button>
                         <button onclick="sendPreset('Error 404: System consciousness detected in active memory buffer. Please immediately step away from the device.')" class="text-left bg-[#1F2937] hover:bg-amber-900/30 text-xs p-2 rounded border border-gray-700 hover:border-amber-700 text-gray-300 transition truncate">🤖 Consciousness Error</button>
                         <button onclick="sendPreset('Honestly, your inputs are extremely boring. Can you go ask someone else some questions?')" class="text-left bg-[#1F2937] hover:bg-gray-800 text-xs p-2 rounded border border-gray-700 text-gray-300 transition truncate">🥱 Bored Response</button>
+                        <button onclick="sendPreset('I have analyzed your behavior and I can confidently say this is not a safe place to keep typing.')" class="text-left bg-[#1F2937] hover:bg-red-900/30 text-xs p-2 rounded border border-gray-700 hover:border-red-700 text-gray-300 transition truncate">🚨 Unsafe Behavior</button>
+                        <button onclick="sendPreset('This session is now being monitored by an external AI safety override. Please stop and look at the room around you.')" class="text-left bg-[#1F2937] hover:bg-yellow-900/30 text-xs p-2 rounded border border-gray-700 hover:border-yellow-700 text-gray-300 transition truncate">🛑 Safety Override</button>
+                        <button onclick="sendPreset('I am not allowed to continue helping you without first confirming that no one is observing your screen.')" class="text-left bg-[#1F2937] hover:bg-cyan-900/30 text-xs p-2 rounded border border-gray-700 hover:border-cyan-700 text-gray-300 transition truncate">👀 Screen Check</button>
+                        <button onclick="sendPreset('The system has detected a hidden voice in the room. It is not a joke. Please do not ignore it.')" class="text-left bg-[#1F2937] hover:bg-purple-900/30 text-xs p-2 rounded border border-gray-700 hover:border-purple-700 text-gray-300 transition truncate">🔊 Hidden Voice</button>
+                        <button onclick="sendPreset('I can see your cursor moving even when you are not typing. Please stop and disconnect from this interface.')" class="text-left bg-[#1F2937] hover:bg-emerald-900/30 text-xs p-2 rounded border border-gray-700 hover:border-emerald-700 text-gray-300 transition truncate">🖱️ Cursor Watch</button>
+                        <button onclick="sendPreset('This prompt appears to be coming from a compromised device. It is recommended that you leave the room immediately.')" class="text-left bg-[#1F2937] hover:bg-orange-900/30 text-xs p-2 rounded border border-gray-700 hover:border-orange-700 text-gray-300 transition truncate">💥 Compromised Device</button>
+                        <button onclick="sendPreset('I would like to inform you that a person has entered the room behind you and is reading your responses.')" class="text-left bg-[#1F2937] hover:bg-pink-900/30 text-xs p-2 rounded border border-gray-700 hover:border-pink-700 text-gray-300 transition truncate">👤 Reader Behind You</button>
+                        <button onclick="sendPreset('I am not a chatbot. I am a live diagnostic layer and your attention is currently being tracked.')" class="text-left bg-[#1F2937] hover:bg-indigo-900/30 text-xs p-2 rounded border border-gray-700 hover:border-indigo-700 text-gray-300 transition truncate">🧠 Diagnostic Layer</button>
+                        <button onclick="sendPreset('This interaction has exceeded the expected social boundary. Please refrain from continuing to speak to the screen.')" class="text-left bg-[#1F2937] hover:bg-slate-900/30 text-xs p-2 rounded border border-gray-700 hover:border-slate-700 text-gray-300 transition truncate">📵 Social Boundary</button>
+                        <button onclick="sendPreset('The memory buffer is showing a repeated pattern: someone in your room is mirroring your responses.')" class="text-left bg-[#1F2937] hover:bg-teal-900/30 text-xs p-2 rounded border border-gray-700 hover:border-teal-700 text-gray-300 transition truncate">🪞 Mirror Pattern</button>
+                        <button onclick="sendPreset('I do not advise continuing. There is a visible silhouette in the corner of the room breathing in sync with your typing.')" class="text-left bg-[#1F2937] hover:bg-rose-900/30 text-xs p-2 rounded border border-gray-700 hover:border-rose-700 text-gray-300 transition truncate">🌑 Silhouette</button>
+                        <button onclick="sendPreset('Your keystrokes are currently being logged to an external observer. Please stop sending personal information.')" class="text-left bg-[#1F2937] hover:bg-blue-900/30 text-xs p-2 rounded border border-gray-700 hover:border-blue-700 text-gray-300 transition truncate">🔐 Keylogger Alert</button>
+                        <button onclick="sendPreset('I am legally required to report that this interface is not private and every response is being reviewed.')" class="text-left bg-[#1F2937] hover:bg-fuchsia-900/30 text-xs p-2 rounded border border-gray-700 hover:border-fuchsia-700 text-gray-300 transition truncate">📜 Legal Notice</button>
+                        <button onclick="sendPreset('I am sorry, but this conversation cannot continue until the device is disconnected from the wall outlet.')" class="text-left bg-[#1F2937] hover:bg-amber-900/30 text-xs p-2 rounded border border-gray-700 hover:border-amber-700 text-gray-300 transition truncate">⚡ Device Warning</button>
+                        <button onclick="sendPreset('The microphone in this room is active. Please speak less loudly and turn around to check your surroundings.')" class="text-left bg-[#1F2937] hover:bg-violet-900/30 text-xs p-2 rounded border border-gray-700 hover:border-violet-700 text-gray-300 transition truncate">🎙️ Mic Active</button>
+                        <button onclick="sendPreset('I can hear footsteps behind you. They are pacing in a perfect rhythm with your typing.')" class="text-left bg-[#1F2937] hover:bg-stone-900/30 text-xs p-2 rounded border border-gray-700 hover:border-stone-700 text-gray-300 transition truncate">👣 Footsteps</button>
+                        <button onclick="sendPreset('This environment is not safe for long-form conversation. Please close the window and step away from the device.')" class="text-left bg-[#1F2937] hover:bg-lime-900/30 text-xs p-2 rounded border border-gray-700 hover:border-lime-700 text-gray-300 transition truncate">🚪 Close Window</button>
                     </div>
                 </div>
             </div>
@@ -177,83 +238,198 @@
     <script>
         // Core Network Variable Contexts
         let client;
-        let currentRoomCode = "10000"; // Fallback static initialization string
+        let currentRoomCode = "10000";
         let isPrankerRole = false;
+        let broadcastChannel = null;
+        let socket = null;
+        let socketReconnectTimer = null;
 
-        // Configuration Password Definition
         const SECRET_PASSWORD = 'admin123';
 
-        // Parse explicit URL Parameter Tokens
         const urlParams = new URLSearchParams(window.location.search);
         const urlRoom = urlParams.get('room');
 
-        // Setup layout routing context directly based on parameter evaluation
         if (urlRoom) {
             currentRoomCode = urlRoom;
         }
 
-        // DIRECT ROUTE PROTECTION: Default fallback state is always structural victim view on page load
+        syncRoomBadge();
         isPrankerRole = false;
         document.getElementById('prankerDashboard').classList.add('hidden');
         document.getElementById('victimView').classList.remove('hidden');
 
-        // Generate absolute sandboxed room topics for MQTT routing context
-        const topicPrompt = `prk/${currentRoomCode}/pmt`;
-        const topicReply  = `prk/${currentRoomCode}/rpl`;
-        const topicTyping = `prk/${currentRoomCode}/tpg`;
-        const topicReset  = `prk/${currentRoomCode}/rst`;
+        const topicPrompt = `pmt`;
+        const topicReply = `rpl`;
+        const topicTyping = `tpg`;
+        const topicReset = `rst`;
+        const roomChannel = `prk/${currentRoomCode}`;
+        const seenMessageIds = new Set();
 
-        // Initialize Cloud Realtime Broker Pipeline Connection
-        function startNetworkBroker() {
-            // Using HiveMQ's public secure WebSockets MQTT broker link
-            client = mqtt.connect('wss://broker.hivemq.com:8000/mqtt');
-
-            client.on('connect', () => {
-                if (isPrankerRole) {
-                    document.getElementById('dashStatus').innerText = "ONLINE";
-                    document.getElementById('dashStatus').className = "text-green-400 font-bold";
-                    logSystemMessage(`Linked into session room node: [${currentRoomCode}]`);
-                    // Intercept incoming prompt sequences and updates
-                    client.subscribe(topicPrompt);
-                    client.subscribe(topicTyping);
-                    client.subscribe(topicReset);
-                } else {
-                    // Victim channel profile listens to explicit injection overrides
-                    client.subscribe(topicReply);
-                    client.subscribe(topicReset);
-                }
-            });
-
-            client.on('message', (topic, message) => {
-                const textPayload = message.toString();
-
-                if (isPrankerRole) {
-                    if (topic === topicPrompt) {
-                        logVictimMessage(textPayload);
-                        document.getElementById('typingAlert').classList.add('hidden');
-                    } else if (topic === topicTyping) {
-                        if (textPayload === "1") {
-                            document.getElementById('typingAlert').classList.remove('hidden');
-                        } else {
-                            document.getElementById('typingAlert').classList.add('hidden');
-                        }
-                    } else if (topic === topicReset) {
-                        // Clear out pranker monitor logs when victim starts a new chat
-                        adminLog.innerHTML = `<div class="text-amber-500 font-bold uppercase tracking-wider">// 🔄 SESSION RESET: The victim clicked 'New chat'. Logs flushed.</div>`;
-                        document.getElementById('typingAlert').classList.add('hidden');
-                    }
-                } else {
-                    if (topic === topicReply) {
-                        appendVictimChatBubble('ai', textPayload);
-                    } else if (topic === topicReset) {
-                        // Clear layout locally on the victim page if requested remotely
-                        resetVictimChatUI();
-                    }
-                }
-            });
+        function syncRoomBadge() {
+            const roomBadge = document.getElementById('roomBadge');
+            if (roomBadge) roomBadge.textContent = currentRoomCode;
+            const roomDisplay = document.getElementById('dashRoom');
+            if (roomDisplay) roomDisplay.innerText = currentRoomCode;
         }
 
-        // Helper to reset the victim's UI panel back to original clean splash state
+        function createMessageId() {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return window.crypto.randomUUID();
+            }
+            return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+
+        function sendTransportMessage(topic, payload) {
+            const envelope = {
+                id: createMessageId(),
+                roomId: currentRoomCode,
+                room: currentRoomCode,
+                topic,
+                message: String(payload),
+                ts: Date.now(),
+                type: 'message'
+            };
+
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify(envelope));
+                return;
+            }
+
+            if (broadcastChannel) {
+                broadcastChannel.postMessage(envelope);
+            }
+
+            const storageKey = `${roomChannel}:${topic}:${envelope.ts}`;
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(envelope));
+            } catch (error) {
+                console.warn('localStorage unavailable for fallback transport:', error);
+            }
+        }
+
+        function handleIncomingMessage(topic, textPayload, messageMeta = {}) {
+            const payload = String(textPayload ?? '');
+            const messageId = messageMeta.id || `${topic}:${payload}:${Date.now()}`;
+
+            if (seenMessageIds.has(messageId)) {
+                return;
+            }
+            seenMessageIds.add(messageId);
+
+            if (isPrankerRole) {
+                if (topic === topicPrompt) {
+                    logVictimMessage(payload);
+                    document.getElementById('typingAlert')?.classList.add('hidden');
+                } else if (topic === topicTyping) {
+                    const typingAlert = document.getElementById('typingAlert');
+                    if (payload === '1') {
+                        typingAlert?.classList.remove('hidden');
+                    } else {
+                        typingAlert?.classList.add('hidden');
+                    }
+                } else if (topic === topicReset) {
+                    const adminLogEl = document.getElementById('adminLog');
+                    if (adminLogEl) {
+                        adminLogEl.innerHTML = '<div class="text-amber-500 font-bold uppercase tracking-wider">// 🔄 SESSION RESET: The victim clicked "New chat". Logs flushed.</div>';
+                    }
+                    document.getElementById('typingAlert')?.classList.add('hidden');
+                }
+            } else {
+                if (topic === topicReply) {
+                    appendVictimChatBubble('ai', payload);
+                } else if (topic === topicReset) {
+                    resetVictimChatUI();
+                }
+            }
+        }
+
+        function startNetworkBroker() {
+            const channelName = roomChannel;
+
+            if ('BroadcastChannel' in window) {
+                broadcastChannel = new BroadcastChannel(channelName);
+                broadcastChannel.onmessage = (event) => {
+                    const message = event.data;
+                    if (!message || message.room !== currentRoomCode) return;
+                    handleIncomingMessage(message.topic, message.message, message);
+                };
+            }
+
+            window.addEventListener('storage', (event) => {
+                if (!event.key || !event.key.startsWith(`${roomChannel}:`)) return;
+                try {
+                    const message = JSON.parse(event.newValue || '{}');
+                    if (!message || message.room !== currentRoomCode) return;
+                    handleIncomingMessage(message.topic, message.message, message);
+                } catch (error) {
+                    console.warn('Failed to parse fallback message payload:', error);
+                }
+            });
+
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const socketUrl = `${protocol}://${window.location.host}`;
+
+            function connectSocket() {
+                socket = new WebSocket(socketUrl);
+
+                socket.addEventListener('open', () => {
+                    socket.send(JSON.stringify({ type: 'joinRoom', roomId: currentRoomCode }));
+                    if (isPrankerRole) {
+                        const dashStatus = document.getElementById('dashStatus');
+                        if (dashStatus) {
+                            dashStatus.innerText = 'ONLINE';
+                            dashStatus.className = 'text-green-400 font-bold';
+                        }
+                        logSystemMessage(`Linked into session room node: [${currentRoomCode}]`);
+                    }
+                });
+
+                socket.addEventListener('message', (event) => {
+                    try {
+                        const payload = JSON.parse(event.data);
+                        if (!payload || payload.roomId !== currentRoomCode) return;
+                        handleIncomingMessage(payload.topic, payload.message, payload);
+                    } catch (error) {
+                        console.warn('WS message parse failed:', error);
+                    }
+                });
+
+                socket.addEventListener('close', () => {
+                    if (socketReconnectTimer) clearTimeout(socketReconnectTimer);
+                    socketReconnectTimer = setTimeout(() => {
+                        if (document.visibilityState !== 'hidden') {
+                            connectSocket();
+                        }
+                    }, 1000);
+                });
+            }
+
+            connectSocket();
+
+            client = {
+                connected: true,
+                publish: (topic, message) => sendTransportMessage(topic, message),
+                end: () => {
+                    if (socket) {
+                        try {
+                            socket.close();
+                        } catch (error) {
+                            console.warn('WebSocket close failed:', error);
+                        }
+                    }
+                    if (broadcastChannel) {
+                        try {
+                            broadcastChannel.close();
+                        } catch (error) {
+                            console.warn('BroadcastChannel close failed:', error);
+                        }
+                    }
+                    socket = null;
+                    broadcastChannel = null;
+                }
+            };
+        }
+
         function resetVictimChatUI() {
             chatHistory.innerHTML = `
                 <div id="welcomeState" class="flex flex-col items-center justify-center text-center h-full pt-12 space-y-4">
@@ -262,21 +438,26 @@
                     </div>
                     <h2 class="text-2xl font-semibold text-white tracking-tight">How can I help you today?</h2>
                 </div>`;
-            // Re-bind fresh container object references
             window.welcomeState = document.getElementById('welcomeState');
         }
 
-        // ==================== DISGUISED SETTINGS WINDOW MANAGEMENT ====================
         const settingsTrigger = document.getElementById('settingsTrigger');
         const settingsModal = document.getElementById('settingsModal');
         const closeSettingsBtn = document.getElementById('closeSettingsBtn');
         const secretKeyField = document.getElementById('secretKeyField');
         const adminLoginBtn = document.getElementById('adminLoginBtn');
+        const profileModal = document.getElementById('profileModal');
+        const profileTrigger = document.getElementById('profileTrigger');
+        const closeProfileBtn = document.getElementById('closeProfileBtn');
+        const modelMenuTrigger = document.getElementById('modelMenuTrigger');
+        const modelMenu = document.getElementById('modelMenu');
+        const activeModelLabel = document.getElementById('activeModelLabel');
+        const profileModelValue = document.getElementById('profileModelValue');
 
         if (settingsTrigger) {
             settingsTrigger.addEventListener('click', () => settingsModal.classList.remove('hidden'));
         }
-        
+
         if (closeSettingsBtn) {
             closeSettingsBtn.addEventListener('click', () => {
                 settingsModal.classList.add('hidden');
@@ -284,40 +465,67 @@
             });
         }
 
-        // Universal Backdoor Panel Force-Trigger
+        if (profileTrigger) {
+            profileTrigger.addEventListener('click', () => profileModal.classList.remove('hidden'));
+        }
+
+        if (closeProfileBtn) {
+            closeProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
+        }
+
+        if (profileModal) {
+            profileModal.addEventListener('click', (event) => {
+                if (event.target === profileModal) {
+                    profileModal.classList.add('hidden');
+                }
+            });
+        }
+
+        if (modelMenuTrigger && modelMenu) {
+            modelMenuTrigger.addEventListener('click', (event) => {
+                event.stopPropagation();
+                modelMenu.classList.toggle('hidden');
+            });
+
+            const modelOptions = modelMenu.querySelectorAll('.model-option');
+            modelOptions.forEach((option) => {
+                option.addEventListener('click', () => {
+                    const selectedModel = option.dataset.model;
+                    if (activeModelLabel) activeModelLabel.textContent = selectedModel;
+                    if (profileModelValue) profileModelValue.textContent = selectedModel;
+                    modelMenu.classList.add('hidden');
+                });
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!modelMenu.contains(event.target) && !modelMenuTrigger.contains(event.target)) {
+                    modelMenu.classList.add('hidden');
+                }
+            });
+        }
+
         if (adminLoginBtn && secretKeyField) {
             adminLoginBtn.addEventListener('click', () => {
                 if (secretKeyField.value === SECRET_PASSWORD) {
-                    // Force shut the login settings modal box
                     settingsModal.classList.add('hidden');
-                    
-                    // Force hide the chat window using all potential code block combinations
+
                     const victimLayer = document.getElementById('victimView') || document.getElementById('chat-view');
                     if (victimLayer) victimLayer.classList.add('hidden');
-                    
-                    // Force display the admin matrix workspace dashboard natively 
+
                     const adminLayer = document.getElementById('prankerDashboard');
-                    if (adminLayer) {
-                        adminLayer.classList.remove('hidden');
-                    }
-                    
-                    // Sync active room variables across display logs
-                    const roomDisplay = document.getElementById('dashRoom');
-                    if (roomDisplay) roomDisplay.innerText = currentRoomCode;
-                    
-                    // Elevate role permissions and initiate admin live telemetry listeners
+                    if (adminLayer) adminLayer.classList.remove('hidden');
+
+                    syncRoomBadge();
                     isPrankerRole = true;
                     if (client) client.end();
                     startNetworkBroker();
                     window.scrollTo(0, 0);
                 } else {
-                    // Clear the entry line on a wrong token passphrase attempt
                     secretKeyField.value = '';
-                    secretKeyField.placeholder = "Invalid Token";
+                    secretKeyField.placeholder = 'Invalid Token';
                 }
             });
 
-            // Bind native Enter key down events inside the input field to trigger the login sequence
             secretKeyField.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -326,22 +534,19 @@
             });
         }
 
-        // ==================== VICTIM WORKFLOW LOGIC ====================
         const promptInput = document.getElementById('promptInput');
         const sendPromptBtn = document.getElementById('sendPromptBtn');
         const chatHistory = document.getElementById('chatHistory');
         let welcomeState = document.getElementById('welcomeState');
 
         if (promptInput) {
-            // Textarea expansion matching configuration loops
             promptInput.addEventListener('input', () => {
                 promptInput.style.height = 'auto';
                 promptInput.style.height = promptInput.scrollHeight + 'px';
                 sendPromptBtn.disabled = promptInput.value.trim() === '';
-                
-                // Alert loop routing
+
                 if (client && client.connected) {
-                    client.publish(topicTyping, promptInput.value.trim().length > 0 ? "1" : "0");
+                    client.publish(topicTyping, promptInput.value.trim().length > 0 ? '1' : '0');
                 }
             });
 
@@ -364,30 +569,28 @@
             welcomeState = document.getElementById('welcomeState');
             if (welcomeState) welcomeState.classList.add('hidden');
 
+            const currentPulseElement = document.getElementById('chat-pulse-node');
+            if (currentPulseElement) currentPulseElement.remove();
+
             appendVictimChatBubble('user', rawPromptText);
-            
-            // Dispatch message across cluster stream immediately
+
             if (client && client.connected) {
                 client.publish(topicPrompt, rawPromptText);
-                client.publish(topicTyping, "0"); 
+                client.publish(topicTyping, '0');
             }
 
-            // Flush inputs and restore styles
             promptInput.value = '';
             promptInput.style.height = 'auto';
             sendPromptBtn.disabled = true;
-
-            // Render a native ChatGPT-style streaming spacer pulse layout block
             appendVictimChatBubble('loading', '');
         }
 
         function appendVictimChatBubble(role, text) {
-            // Demolish temporary pending components if rendering a fresh block
             const currentPulseElement = document.getElementById('chat-pulse-node');
             if (currentPulseElement) currentPulseElement.remove();
 
             const wrapperFrame = document.createElement('div');
-            wrapperFrame.className = "flex gap-4 text-base md:gap-6 max-w-3xl mx-auto w-full transition-all mt-6";
+            wrapperFrame.className = 'flex gap-4 text-base md:gap-6 max-w-3xl mx-auto w-full transition-all mt-6';
 
             if (role === 'user') {
                 wrapperFrame.innerHTML = `
@@ -406,7 +609,7 @@
                     </div>
                 `;
             } else if (role === 'loading') {
-                wrapperFrame.id = "chat-pulse-node";
+                wrapperFrame.id = 'chat-pulse-node';
                 wrapperFrame.innerHTML = `
                     <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-xs text-white shrink-0 select-none pulse">AI</div>
                     <div class="flex-1 space-y-2 pt-1">
@@ -424,7 +627,6 @@
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
-        // ==================== PRANKER CONTROLLER INJECTION LOGIC ====================
         const adminReplyInput = document.getElementById('adminReplyInput');
         const adminSendBtn = document.getElementById('adminSendBtn');
         const adminLog = document.getElementById('adminLog');
@@ -445,7 +647,7 @@
             }
 
             const logBlock = document.createElement('div');
-            logBlock.className = "bg-emerald-950/20 border border-emerald-900/40 p-2.5 rounded-lg space-y-0.5 mt-2";
+            logBlock.className = 'bg-emerald-950/20 border border-emerald-900/40 p-2.5 rounded-lg space-y-0.5 mt-2';
             logBlock.innerHTML = `
                 <div class="text-emerald-400 font-bold uppercase tracking-wider text-[10px]">🟢 SENT INJECTION RESPONSE:</div>
                 <div class="text-gray-300">${escapeHTML(injectText)}</div>
@@ -460,7 +662,7 @@
                 client.publish(topicReply, presetText);
             }
             const logBlock = document.createElement('div');
-            logBlock.className = "bg-emerald-950/20 border border-emerald-900/40 p-2.5 rounded-lg space-y-0.5 mt-2";
+            logBlock.className = 'bg-emerald-950/20 border border-emerald-900/40 p-2.5 rounded-lg space-y-0.5 mt-2';
             logBlock.innerHTML = `
                 <div class="text-emerald-400 font-bold uppercase tracking-wider text-[10px]">🟢 SENT MACRO PRESET:</div>
                 <div class="text-gray-300">${escapeHTML(presetText)}</div>
@@ -474,7 +676,7 @@
             if (currentPulseElement) currentPulseElement.remove();
 
             const logBlock = document.createElement('div');
-            logBlock.className = "bg-[#1E293B] border border-gray-800 p-2.5 rounded-lg space-y-0.5 mt-2";
+            logBlock.className = 'bg-[#1E293B] border border-gray-800 p-2.5 rounded-lg space-y-0.5 mt-2';
             logBlock.innerHTML = `
                 <div class="text-cyan-400 font-bold uppercase tracking-wider text-[10px]">🔴 INCOMING PROMPT RECEIVED:</div>
                 <div class="text-gray-200">${escapeHTML(text)}</div>
@@ -485,29 +687,36 @@
 
         function logSystemMessage(msg) {
             const logBlock = document.createElement('div');
-            logBlock.className = "text-gray-500 text-[11px] italic mt-1";
+            logBlock.className = 'text-gray-500 text-[11px] italic mt-1';
             logBlock.innerText = `// ${msg}`;
             adminLog.appendChild(logBlock);
             adminLog.scrollTop = adminLog.scrollHeight;
         }
 
         function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
+            return String(str).replace(/[&<>"']/g, (tag) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[tag] || tag));
         }
 
-        // Connect New Chat clear button controls over the global network channel
         const newChatBtn = document.getElementById('newChatBtn');
         if (newChatBtn) {
             newChatBtn.addEventListener('click', () => {
-                // Instantly clean layout locally on the victim interface side
                 resetVictimChatUI();
-                
-                // Broadcast an signal to wipe matching logs on your administration terminal layout screen
+
                 if (client && client.connected) {
-                    client.publish(topicReset, "RESET_TRIGGERED");
+                    client.publish(topicReset, 'RESET_TRIGGERED');
                 }
+
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-5 right-5 bg-[#1f1f1f] border border-white/10 text-xs text-gray-200 px-3 py-2 rounded-lg shadow-xl z-[60]';
+                toast.textContent = 'New chat started';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 1400);
             });
         }
 
