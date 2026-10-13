@@ -262,6 +262,7 @@
         let broadcastChannel = null;
         let socket = null;
         let socketReconnectTimer = null;
+        let notificationAudioContext = null;
 
         const SECRET_PASSWORD = 'admin123';
 
@@ -307,6 +308,38 @@
             return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
         }
 
+        function enableNotificationAudio() {
+            if (!isPrankerRole) return;
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+
+            if (!notificationAudioContext) {
+                notificationAudioContext = new AudioContextClass();
+            }
+            if (notificationAudioContext.state === 'suspended') {
+                notificationAudioContext.resume().catch(() => {});
+            }
+        }
+
+        function playIncomingPing() {
+            if (!notificationAudioContext || notificationAudioContext.state !== 'running') return;
+
+            const now = notificationAudioContext.currentTime;
+            const oscillator = notificationAudioContext.createOscillator();
+            const volume = notificationAudioContext.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, now);
+            volume.gain.setValueAtTime(0.0001, now);
+            volume.gain.exponentialRampToValueAtTime(0.035, now + 0.015);
+            volume.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+            oscillator.connect(volume);
+            volume.connect(notificationAudioContext.destination);
+            oscillator.start(now);
+            oscillator.stop(now + 0.17);
+        }
+
+        document.addEventListener('pointerdown', enableNotificationAudio);
+
         function sendTransportMessage(topic, payload) {
             const envelope = {
                 id: createMessageId(),
@@ -347,6 +380,7 @@
             if (isPrankerRole) {
                 if (topic === topicPrompt) {
                     logVictimMessage(payload);
+                    playIncomingPing();
                     document.getElementById('typingAlert')?.classList.add('hidden');
                 } else if (topic === topicTyping) {
                     const typingAlert = document.getElementById('typingAlert');
@@ -558,6 +592,7 @@
 
                     syncRoomBadge();
                     isPrankerRole = true;
+                    enableNotificationAudio();
                     if (client) client.end();
                     startNetworkBroker();
                     window.scrollTo(0, 0);
