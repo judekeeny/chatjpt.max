@@ -171,6 +171,7 @@
                 <h1 class="text-sm font-bold uppercase tracking-wider text-red-400">PRANK CONTROL MATRIX v2.0</h1>
             </div>
             <div class="flex items-center gap-4 text-xs">
+                <button id="testPingBtn" type="button" class="bg-[#1F2937] hover:bg-gray-700 px-3 py-1.5 rounded-md border border-gray-700 text-gray-200 transition">Test ping</button>
                 <div class="bg-[#1F2937] px-3 py-1.5 rounded-md border border-gray-700">
                     STATUS: <span id="dashStatus" class="text-amber-400 font-bold">CONNECTING</span>
                 </div>
@@ -330,12 +331,12 @@
             oscillator.type = 'sine';
             oscillator.frequency.setValueAtTime(880, now);
             volume.gain.setValueAtTime(0.0001, now);
-            volume.gain.exponentialRampToValueAtTime(0.035, now + 0.015);
-            volume.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+            volume.gain.exponentialRampToValueAtTime(0.09, now + 0.015);
+            volume.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
             oscillator.connect(volume);
             volume.connect(notificationAudioContext.destination);
             oscillator.start(now);
-            oscillator.stop(now + 0.17);
+            oscillator.stop(now + 0.23);
         }
 
         document.addEventListener('pointerdown', enableNotificationAudio);
@@ -778,6 +779,14 @@
         const adminReplyInput = document.getElementById('adminReplyInput');
         const adminSendBtn = document.getElementById('adminSendBtn');
         const adminLog = document.getElementById('adminLog');
+        const testPingBtn = document.getElementById('testPingBtn');
+
+        if (testPingBtn) {
+            testPingBtn.addEventListener('click', () => {
+                enableNotificationAudio();
+                playIncomingPing();
+            });
+        }
 
         if (imageUploadBtn && imageUploadInput) {
             imageUploadBtn.addEventListener('click', () => imageUploadInput.click());
