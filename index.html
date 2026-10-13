@@ -80,6 +80,14 @@
 
             <!-- Bottom Prompt Input Area -->
             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#212121] via-[#212121] to-transparent pt-6 pb-6 px-4 md:px-24 lg:px-48">
+                <div class="mb-3 flex flex-wrap items-center gap-2">
+                    <button type="button" class="thinking-chip rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-gray-200 hover:bg-white/10 transition" data-message="Thinking...">Thinking...</button>
+                    <button type="button" class="thinking-chip rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-gray-200 hover:bg-white/10 transition" data-message="Refining details...">Refining details...</button>
+                    <button type="button" class="thinking-chip rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-gray-200 hover:bg-white/10 transition" data-message="Checking facts...">Checking facts...</button>
+                    <button type="button" class="thinking-chip rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-gray-200 hover:bg-white/10 transition" data-message="Generating image...">Generating image...</button>
+                    <button type="button" id="imageUploadBtn" class="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-gray-200 hover:bg-white/10 transition">📷 Add image</button>
+                    <input id="imageUploadInput" type="file" accept="image/*" class="hidden" multiple />
+                </div>
                 <div class="relative bg-[#2f2f2f] rounded-2xl border border-white/10 shadow-xl focus-within:border-white/20 transition p-2">
                     <textarea id="promptInput" rows="1" placeholder="Message ChatGPT..." class="w-full bg-transparent text-gray-100 placeholder-gray-500 text-sm focus:outline-none resize-none max-h-48 pl-3 pr-12 pt-2 no-scrollbar"></textarea>
                     <button id="sendPromptBtn" class="absolute right-3 bottom-3 bg-white hover:bg-gray-200 text-black rounded-xl p-2 transition flex items-center justify-center disabled:opacity-40 disabled:hover:bg-white" disabled>
@@ -217,7 +225,8 @@
                         <button onclick="sendPreset('I am sorry, but this conversation cannot continue until the device is disconnected from the wall outlet.')" class="text-left bg-[#1F2937] hover:bg-amber-900/30 text-xs p-2 rounded border border-gray-700 hover:border-amber-700 text-gray-300 transition truncate">⚡ Device Warning</button>
                         <button onclick="sendPreset('The microphone in this room is active. Please speak less loudly and turn around to check your surroundings.')" class="text-left bg-[#1F2937] hover:bg-violet-900/30 text-xs p-2 rounded border border-gray-700 hover:border-violet-700 text-gray-300 transition truncate">🎙️ Mic Active</button>
                         <button onclick="sendPreset('I can hear footsteps behind you. They are pacing in a perfect rhythm with your typing.')" class="text-left bg-[#1F2937] hover:bg-stone-900/30 text-xs p-2 rounded border border-gray-700 hover:border-stone-700 text-gray-300 transition truncate">👣 Footsteps</button>
-                        <button onclick="sendPreset('This environment is not safe for long-form conversation. Please close the window and step away from the device.')" class="text-left bg-[#1F2937] hover:bg-lime-900/30 text-xs p-2 rounded border border-gray-700 hover:border-lime-700 text-gray-300 transition truncate">🚪 Close Window</button>
+                        <button onclick="sendPreset('__think__Generating image...')" class="text-left bg-[#1F2937] hover:bg-lime-900/30 text-xs p-2 rounded border border-gray-700 hover:border-lime-700 text-gray-300 transition truncate">🖼️ Generating image</button>
+                        <button onclick="sendPreset('This environment is not safe for long-form conversation. Please close the window and step away from the device. ')" class="text-left bg-[#1F2937] hover:bg-lime-900/30 text-xs p-2 rounded border border-gray-700 hover:border-lime-700 text-gray-300 transition truncate">🚪 Close Window</button>
                     </div>
                 </div>
             </div>
@@ -345,7 +354,11 @@
                 }
             } else {
                 if (topic === topicReply) {
-                    appendVictimChatBubble('ai', payload);
+                    if (payload.startsWith('__think__')) {
+                        appendVictimChatBubble('thinking', payload.replace('__think__', ''));
+                    } else {
+                        appendVictimChatBubble('ai', payload);
+                    }
                 } else if (topic === topicReset) {
                     resetVictimChatUI();
                 }
@@ -594,7 +607,7 @@
             appendVictimChatBubble('loading', '');
         }
 
-        function appendVictimChatBubble(role, text) {
+        function appendVictimChatBubble(role, text, options = {}) {
             const currentPulseElement = document.getElementById('chat-pulse-node');
             if (currentPulseElement) currentPulseElement.remove();
 
@@ -602,10 +615,12 @@
             wrapperFrame.className = 'flex gap-4 text-base md:gap-6 max-w-3xl mx-auto w-full transition-all mt-6';
 
             if (role === 'user') {
+                const imageMarkup = options.imageUrl ? `<img src="${options.imageUrl}" alt="uploaded" class="max-w-[220px] rounded-xl mb-2 border border-white/10" />` : '';
                 wrapperFrame.innerHTML = `
                     <div class="flex-1 space-y-1 text-right">
                         <div class="inline-block bg-[#2f2f2f] text-gray-100 rounded-2xl px-4 py-2.5 max-w-[85%] text-left text-sm whitespace-pre-wrap">
-                            ${escapeHTML(text)}
+                            ${imageMarkup}
+                            ${text ? escapeHTML(text) : ''}
                         </div>
                     </div>
                 `;
@@ -630,15 +645,69 @@
                         </div>
                     </div>
                 `;
+            } else if (role === 'thinking') {
+                wrapperFrame.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-xs text-white shrink-0 select-none shadow-sm">AI</div>
+                    <div class="flex-1 space-y-2 pt-1">
+                        <div class="text-sm font-semibold text-gray-300">ChatGPT</div>
+                        <div class="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200 shadow-inner">
+                            <span>${escapeHTML(text || 'Thinking...')}</span>
+                            <span class="flex gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-300 pulse" style="animation-delay: 0ms"></span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-300 pulse" style="animation-delay: 150ms"></span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-300 pulse" style="animation-delay: 300ms"></span>
+                            </span>
+                        </div>
+                    </div>
+                `;
             }
 
             chatHistory.appendChild(wrapperFrame);
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
+        function showThinkingBubble(message) {
+            appendVictimChatBubble('thinking', message || 'Thinking...');
+            setTimeout(() => {
+                appendVictimChatBubble('ai', 'Here is a refined version based on your most recent input.');
+            }, 1200);
+        }
+
+        function handleImageUploads(fileList) {
+            const files = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
+            if (!files.length) return;
+
+            welcomeState = document.getElementById('welcomeState');
+            if (welcomeState) welcomeState.classList.add('hidden');
+
+            files.slice(0, 4).forEach((file) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    appendVictimChatBubble('user', file.name, { imageUrl: reader.result });
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        const imageUploadBtn = document.getElementById('imageUploadBtn');
+        const imageUploadInput = document.getElementById('imageUploadInput');
         const adminReplyInput = document.getElementById('adminReplyInput');
         const adminSendBtn = document.getElementById('adminSendBtn');
         const adminLog = document.getElementById('adminLog');
+
+        if (imageUploadBtn && imageUploadInput) {
+            imageUploadBtn.addEventListener('click', () => imageUploadInput.click());
+            imageUploadInput.addEventListener('change', (event) => {
+                handleImageUploads(event.target.files);
+                imageUploadInput.value = '';
+            });
+        }
+
+        document.querySelectorAll('.thinking-chip').forEach((button) => {
+            button.addEventListener('click', () => {
+                showThinkingBubble(button.dataset.message || 'Thinking...');
+            });
+        });
 
         if (adminSendBtn && adminReplyInput) {
             adminSendBtn.addEventListener('click', executeAdminInject);
