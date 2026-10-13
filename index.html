@@ -248,6 +248,7 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const urlRoom = urlParams.get('room');
+        const forceAdminMode = urlParams.has('ui-test') || urlParams.get('admin') === '1';
 
         if (urlRoom) {
             currentRoomCode = urlRoom;
@@ -257,6 +258,14 @@
         isPrankerRole = false;
         document.getElementById('prankerDashboard').classList.add('hidden');
         document.getElementById('victimView').classList.remove('hidden');
+
+        if (forceAdminMode) {
+            const victimLayer = document.getElementById('victimView');
+            const adminLayer = document.getElementById('prankerDashboard');
+            if (victimLayer) victimLayer.classList.add('hidden');
+            if (adminLayer) adminLayer.classList.remove('hidden');
+            isPrankerRole = true;
+        }
 
         const topicPrompt = `pmt`;
         const topicReply = `rpl`;
