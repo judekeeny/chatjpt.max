@@ -80,20 +80,18 @@
 
             <!-- Bottom Prompt Input Area -->
             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#212121] via-[#212121] to-transparent pt-6 pb-6 px-4 md:px-24 lg:px-48">
-                <div class="mb-3 flex flex-wrap items-center gap-2">
-                    <button type="button" class="thinking-chip rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-gray-200 hover:bg-white/10 transition" data-message="Thinking...">Thinking...</button>
-                    <button type="button" class="thinking-chip rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-gray-200 hover:bg-white/10 transition" data-message="Refining details...">Refining details...</button>
-                    <button type="button" class="thinking-chip rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-gray-200 hover:bg-white/10 transition" data-message="Checking facts...">Checking facts...</button>
-                    <button type="button" class="thinking-chip rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-gray-200 hover:bg-white/10 transition" data-message="Generating image...">Generating image...</button>
-                    <button type="button" id="imageUploadBtn" class="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-gray-200 hover:bg-white/10 transition">📷 Add image</button>
-                    <input id="imageUploadInput" type="file" accept="image/*" class="hidden" multiple />
-                </div>
                 <div class="relative bg-[#2f2f2f] rounded-2xl border border-white/10 shadow-xl focus-within:border-white/20 transition p-2">
                     <textarea id="promptInput" rows="1" placeholder="Message ChatGPT..." class="w-full bg-transparent text-gray-100 placeholder-gray-500 text-sm focus:outline-none resize-none max-h-48 pl-3 pr-12 pt-2 no-scrollbar"></textarea>
                     <button id="sendPromptBtn" class="absolute right-3 bottom-3 bg-white hover:bg-gray-200 text-black rounded-xl p-2 transition flex items-center justify-center disabled:opacity-40 disabled:hover:bg-white" disabled>
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
                         </svg>
+                    </button>
+                </div>
+                <div class="mt-2 flex justify-start">
+                    <button id="createImageBtn" type="button" class="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-gray-200 hover:bg-white/10 transition">
+                        <span aria-hidden="true">▧</span>
+                        Create image
                     </button>
                 </div>
                 <div class="text-center text-xs text-gray-500 mt-2">
@@ -201,6 +199,18 @@
                             <p>3. Responses inject instantly into the user view window when submitted.</p>
                         </div>
                     </div>
+                </div>
+
+                <div class="space-y-2 pt-4 border-t border-gray-800">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Victim Display</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" class="control-thinking-chip text-left bg-[#1F2937] hover:bg-gray-800 text-xs p-2 rounded border border-gray-700 text-gray-300 transition" data-message="Thinking...">Thinking...</button>
+                        <button type="button" class="control-thinking-chip text-left bg-[#1F2937] hover:bg-gray-800 text-xs p-2 rounded border border-gray-700 text-gray-300 transition" data-message="Refining details...">Refining details...</button>
+                        <button type="button" class="control-thinking-chip text-left bg-[#1F2937] hover:bg-gray-800 text-xs p-2 rounded border border-gray-700 text-gray-300 transition" data-message="Checking facts...">Checking facts...</button>
+                        <button type="button" class="control-thinking-chip text-left bg-[#1F2937] hover:bg-gray-800 text-xs p-2 rounded border border-gray-700 text-gray-300 transition" data-message="Generating image...">Generating image...</button>
+                    </div>
+                    <button type="button" id="imageUploadBtn" class="w-full text-left bg-[#1F2937] hover:bg-gray-800 text-xs p-2 rounded border border-gray-700 text-gray-300 transition">Add image to victim chat</button>
+                    <input id="imageUploadInput" type="file" accept="image/*" class="hidden" multiple />
                 </div>
 
                 <div class="space-y-3 pt-4 border-t border-gray-800">
@@ -356,6 +366,15 @@
                 if (topic === topicReply) {
                     if (payload.startsWith('__think__')) {
                         appendVictimChatBubble('thinking', payload.replace('__think__', ''));
+                    } else if (payload.startsWith('__image__')) {
+                        try {
+                            const image = JSON.parse(payload.slice('__image__'.length));
+                            if (typeof image.dataUrl === 'string' && image.dataUrl.startsWith('data:image/')) {
+                                appendVictimChatBubble('image', image.name || 'Image', { imageUrl: image.dataUrl });
+                            }
+                        } catch (error) {
+                            console.warn('Could not display incoming image:', error);
+                        }
                     } else {
                         appendVictimChatBubble('ai', payload);
                     }
@@ -558,6 +577,7 @@
 
         const promptInput = document.getElementById('promptInput');
         const sendPromptBtn = document.getElementById('sendPromptBtn');
+        const createImageBtn = document.getElementById('createImageBtn');
         const chatHistory = document.getElementById('chatHistory');
         let welcomeState = document.getElementById('welcomeState');
 
@@ -584,6 +604,10 @@
             sendPromptBtn.addEventListener('click', executeVictimSubmit);
         }
 
+        if (createImageBtn) {
+            createImageBtn.addEventListener('click', executeImageCreation);
+        }
+
         function executeVictimSubmit() {
             const rawPromptText = promptInput.value.trim();
             if (!rawPromptText) return;
@@ -607,6 +631,23 @@
             appendVictimChatBubble('loading', '');
         }
 
+        function executeImageCreation() {
+            const imagePrompt = promptInput.value.trim() || 'Create an image';
+            welcomeState = document.getElementById('welcomeState');
+            if (welcomeState) welcomeState.classList.add('hidden');
+
+            appendVictimChatBubble('user', imagePrompt);
+            if (client && client.connected) {
+                client.publish(topicPrompt, `Image creation request: ${imagePrompt}`);
+                client.publish(topicTyping, '0');
+            }
+
+            promptInput.value = '';
+            promptInput.style.height = 'auto';
+            sendPromptBtn.disabled = true;
+            appendVictimChatBubble('thinking', 'Generating image...');
+        }
+
         function appendVictimChatBubble(role, text, options = {}) {
             const currentPulseElement = document.getElementById('chat-pulse-node');
             if (currentPulseElement) currentPulseElement.remove();
@@ -624,6 +665,16 @@
                         </div>
                     </div>
                 `;
+            } else if (role === 'image') {
+                const image = document.createElement('img');
+                image.src = options.imageUrl;
+                image.alt = text || 'Shared image';
+                image.className = 'max-w-full max-h-[480px] rounded-xl border border-white/10 object-contain';
+                image.style.maxWidth = 'min(100%, 480px)';
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'flex-1 space-y-2 pt-1';
+                imageContainer.appendChild(image);
+                wrapperFrame.appendChild(imageContainer);
             } else if (role === 'ai') {
                 wrapperFrame.innerHTML = `
                     <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-xs text-white shrink-0 select-none shadow-sm">AI</div>
@@ -646,6 +697,7 @@
                     </div>
                 `;
             } else if (role === 'thinking') {
+                wrapperFrame.id = 'chat-pulse-node';
                 wrapperFrame.innerHTML = `
                     <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-xs text-white shrink-0 select-none shadow-sm">AI</div>
                     <div class="flex-1 space-y-2 pt-1">
@@ -666,24 +718,21 @@
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
-        function showThinkingBubble(message) {
-            appendVictimChatBubble('thinking', message || 'Thinking...');
-            setTimeout(() => {
-                appendVictimChatBubble('ai', 'Here is a refined version based on your most recent input.');
-            }, 1200);
-        }
-
-        function handleImageUploads(fileList) {
+        function sendImagesToVictim(fileList) {
             const files = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
             if (!files.length) return;
 
-            welcomeState = document.getElementById('welcomeState');
-            if (welcomeState) welcomeState.classList.add('hidden');
-
             files.slice(0, 4).forEach((file) => {
+                if (file.size > 4 * 1024 * 1024) {
+                    logSystemMessage(`Image skipped (over 4 MB): ${file.name}`);
+                    return;
+                }
+
                 const reader = new FileReader();
                 reader.onload = () => {
-                    appendVictimChatBubble('user', file.name, { imageUrl: reader.result });
+                    if (typeof reader.result !== 'string') return;
+                    sendTransportMessage(topicReply, `__image__${JSON.stringify({ name: file.name, dataUrl: reader.result })}`);
+                    logSystemMessage(`Image sent to victim: ${file.name}`);
                 };
                 reader.readAsDataURL(file);
             });
@@ -698,14 +747,14 @@
         if (imageUploadBtn && imageUploadInput) {
             imageUploadBtn.addEventListener('click', () => imageUploadInput.click());
             imageUploadInput.addEventListener('change', (event) => {
-                handleImageUploads(event.target.files);
+                sendImagesToVictim(event.target.files);
                 imageUploadInput.value = '';
             });
         }
 
-        document.querySelectorAll('.thinking-chip').forEach((button) => {
+        document.querySelectorAll('.control-thinking-chip').forEach((button) => {
             button.addEventListener('click', () => {
-                showThinkingBubble(button.dataset.message || 'Thinking...');
+                sendPreset(`__think__${button.dataset.message || 'Thinking...'}`);
             });
         });
 
