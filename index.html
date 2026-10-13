@@ -3,388 +3,494 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Prank Chatbot</title>
+    <title>ChatGPT</title>
+    <!-- Tailwind CSS for modern AI chat UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MQTT library for real-time mesh messaging -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-        body {
-            background-color: #212121;
-            color: #ececf1;
-            display: flex;
-            height: 100vh;
-        }
-        .container {
-            display: flex;
-            width: 100%;
-            height: 100%;
-        }
-        /* Views */
-        .view {
-            display: none;
-            flex-direction: column;
-            width: 100%;
-            height: 100%;
-        }
-        .view.active {
-            display: flex;
-        }
-        /* Setup / Control Panel */
-        .setup-panel {
-            padding: 30px;
-            max-width: 500px;
-            margin: auto;
-            background: #2d2d2d;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            text-align: center;
-        }
-        .setup-panel h2 { margin-bottom: 20px; color: #10a37f; }
-        .setup-panel p { margin-bottom: 20px; font-size: 14px; color: #b4b4b4; }
-        .btn {
-            background-color: #10a37f;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            margin: 10px;
-            transition: background 0.2s;
-        }
-        .btn:hover { background-color: #1a7f64; }
-        .btn-secondary { background-color: #4f4f4f; }
-        .btn-secondary:hover { background-color: #656565; }
-
-        /* Shared Chat Styles */
-        .chat-header {
-            background: #202123;
-            padding: 15px;
-            text-align: center;
-            font-weight: bold;
-            border-bottom: 1px solid #4d4d4f;
-            position: relative;
-        }
-        .messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px 0;
-            display: flex;
-            flex-direction: column;
-        }
-        .message-row {
-            display: flex;
-            padding: 20px;
-            border-bottom: 1px solid #343541;
-        }
-        .message-row.user { background-color: #212121; }
-        .message-row.ai { background-color: #343541; }
-        .avatar {
-            width: 30px;
-            height: 30px;
-            border-radius: 4px;
-            margin-right: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
-            flex-shrink: 0;
-        }
-        .user .avatar { background-color: #543a3a; color: #ffbcbc; }
-        .ai .avatar { background-color: #10a37f; color: white; }
-        .message-text {
-            line-height: 1.5;
-            font-size: 15px;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .chat-input-area {
-            padding: 20px;
-            background: linear-gradient(180deg, rgba(33,33,33,0), #212121 50%);
-            display: flex;
-            justify-content: center;
-        }
-        .input-wrapper {
-            position: relative;
-            max-width: 768px;
-            width: 100%;
-            display: flex;
-            background: #2f2f2f;
-            border-radius: 12px;
-            border: 1px solid #4f4f4f;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
-        }
-        .chat-input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            padding: 14px;
-            color: #ececf1;
-            font-size: 15px;
-            outline: none;
-            resize: none;
-            height: 52px;
-        }
-        .send-btn {
-            background: transparent;
-            border: none;
-            color: #8e8ea0;
-            padding: 0 15px;
-            cursor: pointer;
-        }
-        .send-btn.active { color: #10a37f; }
-
-        /* Admin / Pranker Specific Layout */
-        .admin-layout {
-            display: flex;
-            width: 100%;
-            height: 100%;
-        }
-        .admin-sidebar {
-            width: 300px;
-            background: #171717;
-            border-right: 1px solid #2d2d2d;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .status-badge {
-            padding: 8px;
-            border-radius: 6px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 13px;
-        }
-        .status-pending { background: #5c4308; color: #f5c042; }
-        .status-idle { background: #242424; color: #8e8ea0; }
-        .typing-indicator {
-            font-style: italic;
-            color: #8e8ea0;
-            font-size: 13px;
-            margin-top: 5px;
-        }
-        .nav-back {
-            position: absolute;
-            left: 15px;
-            top: 12px;
-            background: #4f4f4f;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+        .pulse { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     </style>
 </head>
-<body>
+<body class="bg-[#212121] text-gray-200 font-sans h-screen overflow-hidden antialiased">
 
-    <div class="container">
-        <!-- 1. SETUP / ROUTING SCREEN -->
-        <div id="setupView" class="view active">
-            <div class="setup-panel">
-                <h2>AI Prank Hub</h2>
-                <p>To run this prank on a single device (like a laptop or an iPad), you can switch between views right here. Hand the <strong>Victim View</strong> to your friend, and use the <strong>Pranker Dashboard</strong> out of sight!</p>
-                <button class="btn" onclick="switchView('userView')">Go to Victim View (The "AI")</button>
-                <button class="btn btn-secondary" onclick="switchView('adminView')">Go to Pranker Dashboard</button>
+    <!-- ==================== VICTIM VIEW (CHATGPT REPLICA) ==================== -->
+    <div id="victimView" class="flex h-full w-full">
+        <!-- Sidebar Replica -->
+        <div class="w-[260px] bg-[#171717] h-full hidden md:flex flex-col justify-between p-3 border-r border-white/5">
+            <div class="flex flex-col gap-2">
+                <div id="newChatBtn" class="flex items-center justify-between p-2 text-sm text-gray-200 hover:bg-[#212121] rounded-lg cursor-pointer transition">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center font-bold text-xs text-white">🗪</div>
+                        <span class="font-medium text-xs">New chat</span>
+                    </div>
+                    <span class="text-xs text-gray-500">📝</span>
+                </div>
+            </div>
+            
+            <!-- Lower Sidebar Settings & Profile Footer Area -->
+            <div class="space-y-1">
+                <div id="settingsTrigger" class="p-2 text-xs text-gray-400 hover:bg-[#212121] rounded-lg cursor-pointer flex items-center justify-between transition">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm">⚙️</span>
+                        <span>Settings</span>
+                    </div>
+                </div>
+                <div class="p-2 text-xs text-gray-400 hover:bg-[#212121] rounded-lg cursor-pointer flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-full bg-emerald-700 flex items-center justify-center text-white font-semibold">U</div>
+                    <span class="truncate font-medium">User Profile</span>
+                </div>
             </div>
         </div>
 
-        <!-- 2. USER / VICTIM VIEW (The Fake AI) -->
-        <div id="userView" class="view">
-            <div class="chat-header">
-                <div class="nav-back" onclick="switchView('setupView')">⚙️ Setup</div>
-                ChatGPT 4.5 Omni
-            </div>
-            <div class="messages" id="userMessages">
-                <div class="message-row ai">
-                    <div class="avatar">AI</div>
-                    <div class="message-text">Hello! I am a highly advanced artificial intelligence model. How can I assist you with your day today?</div>
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col h-full relative bg-[#212121]">
+            <!-- Top Nav Bar -->
+            <div class="h-14 flex items-center justify-between px-4 border-b border-white/5 text-sm font-semibold text-gray-400">
+                <div class="flex items-center gap-2 cursor-pointer hover:text-white">
+                    <span>ChatGPT 4o</span>
+                    <span class="text-xs text-gray-500">▼</span>
                 </div>
             </div>
-            <div class="chat-input-area">
-                <div class="input-wrapper">
-                    <textarea class="chat-input" id="userInput" placeholder="Message ChatGPT..." oninput="toggleSendBtn('userInput', 'userSendBtn')"></textarea>
-                    <button class="send-btn" id="userSendBtn" onclick="submitUserMessage()">➔</button>
+
+            <!-- Scrollable Messages Container -->
+            <div id="chatHistory" class="flex-1 overflow-y-auto px-4 py-6 md:px-24 lg:px-48 space-y-6 no-scrollbar pb-36">
+                <!-- Welcome State -->
+                <div id="welcomeState" class="flex flex-col items-center justify-center text-center h-full pt-12 space-y-4">
+                    <div class="w-12 h-12 bg-white text-[#212121] rounded-full flex items-center justify-center font-black text-2xl shadow-inner select-none">
+                        <span>💡</span>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-white tracking-tight">How can I help you today?</h2>
+                </div>
+            </div>
+
+            <!-- Bottom Prompt Input Area -->
+            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#212121] via-[#212121] to-transparent pt-6 pb-6 px-4 md:px-24 lg:px-48">
+                <div class="relative bg-[#2f2f2f] rounded-2xl border border-white/10 shadow-xl focus-within:border-white/20 transition p-2">
+                    <textarea id="promptInput" rows="1" placeholder="Message ChatGPT..." class="w-full bg-transparent text-gray-100 placeholder-gray-500 text-sm focus:outline-none resize-none max-h-48 pl-3 pr-12 pt-2 no-scrollbar"></textarea>
+                    <button id="sendPromptBtn" class="absolute right-3 bottom-3 bg-white hover:bg-gray-200 text-black rounded-xl p-2 transition flex items-center justify-center disabled:opacity-40 disabled:hover:bg-white" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="text-center text-xs text-gray-500 mt-2">
+                    ChatGPT can make mistakes. Consider checking important information.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== DISGUISED SETTINGS POPUP MODAL ==================== -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-[#2f2f2f] w-full max-w-md rounded-2xl p-6 border border-white/10 shadow-2xl relative font-sans">
+            <h3 class="text-lg font-semibold text-white mb-4">General Settings</h3>
+            <div class="space-y-4 text-sm">
+                <div class="flex items-center justify-between border-b border-white/5 pb-3">
+                    <span class="text-gray-300">Theme</span>
+                    <span class="text-gray-400 bg-[#212121] px-3 py-1 rounded-lg border border-white/5">System Dark</span>
+                </div>
+                <div class="flex items-center justify-between border-b border-white/5 pb-3">
+                    <span class="text-gray-300">Language</span>
+                    <span class="text-gray-400 bg-[#212121] px-3 py-1 rounded-lg border border-white/5">English (US)</span>
+                </div>
+                <!-- Secret Gateway Input Field & Button -->
+                <div class="pt-2">
+                    <label class="block text-xs text-gray-500 mb-1">Developer Channel Token</label>
+                    <div class="flex gap-2">
+                        <input type="password" id="secretKeyField" placeholder="••••••••" class="flex-1 bg-[#212121] border border-white/5 rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-white/10 font-sans">
+                        <button id="adminLoginBtn" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg transition font-medium">Verify</button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button id="closeSettingsBtn" class="bg-white/10 hover:bg-white/20 text-white text-xs font-medium px-4 py-2 rounded-xl transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PRANKER DASHBOARD (HIDDEN MATRIX) ==================== -->
+    <div id="prankerDashboard" class="hidden fixed inset-0 bg-[#0B0F19] text-gray-100 flex flex-col z-50 font-mono">
+        <!-- Dashboard Top Header Bar -->
+        <div class="bg-[#111827] border-b border-gray-800 px-6 py-4 flex items-center justify-between shadow-md">
+            <div class="flex items-center gap-3">
+                <span class="w-3 h-3 rounded-full bg-red-500 pulse"></span>
+                <h1 class="text-sm font-bold uppercase tracking-wider text-red-400">PRANK CONTROL MATRIX v2.0</h1>
+            </div>
+            <div class="flex items-center gap-4 text-xs">
+                <div class="bg-[#1F2937] px-3 py-1.5 rounded-md border border-gray-700">
+                    STATUS: <span id="dashStatus" class="text-amber-400 font-bold">CONNECTING</span>
+                </div>
+                <div class="bg-[#1F2937] px-3 py-1.5 rounded-md border border-gray-700">
+                    ROOM CODE: <span id="dashRoom" class="text-cyan-400 font-bold">-----</span>
                 </div>
             </div>
         </div>
 
-        <!-- 3. ADMIN / PRANKER VIEW (The Puppet Master) -->
-        <div id="adminView" class="view">
-            <div class="admin-layout">
-                <div class="admin-sidebar">
-                    <h3>Pranker Control</h3>
-                    <div id="statusBadge" class="status-badge status-idle">Waiting for victim...</div>
-                    <div id="typingIndicator" class="typing-indicator"></div>
-                    <button class="btn btn-secondary" onclick="switchView('setupView')" style="margin: 20px 0 0 0; width: 100%;">Back to Main Hub</button>
-                    <button class="btn btn-secondary" onclick="clearChat()" style="margin: 10px 0 0 0; width: 100%; background: #5a2323;">Reset/Clear Chat</button>
-                </div>
-                
-                <div style="flex:1; display:flex; flex-direction:column; background:#212121;">
-                    <div class="chat-header">Live Prank Feed (What your friend sees)</div>
-                    <div class="messages" id="adminMessages"></div>
-                    <div class="chat-input-area">
-                        <div class="input-wrapper" style="border-color: #10a37f;">
-                            <textarea class="chat-input" id="adminInput" placeholder="Type your ridiculous 'AI' response here..." oninput="toggleSendBtn('adminInput', 'adminSendBtn')"></textarea>
-                            <button class="send-btn active" id="adminSendBtn" onclick="submitAdminResponse()">➔</button>
+        <!-- Dashboard Layout Split Screen -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Left Panel: Session Logs & Status -->
+            <div class="w-1/3 border-r border-gray-800 bg-[#0F172A] p-4 flex flex-col justify-between">
+                <div class="space-y-4 overflow-y-auto no-scrollbar">
+                    <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-800 pb-2">Telemetry Monitor</h3>
+                    <div id="typingAlert" class="bg-amber-950/40 border border-amber-800 text-amber-300 p-3 rounded-lg text-xs hidden flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 pulse"></span>
+                        <span>Victim is typing right now...</span>
+                    </div>
+                    <div class="space-y-2">
+                        <span class="text-[11px] text-gray-500 uppercase tracking-wider block">Operational Guide:</span>
+                        <div class="bg-[#1E293B] p-3 rounded-lg text-xs text-gray-300 leading-relaxed border border-gray-800 space-y-2">
+                            <p>1. Send your Base URL with a matching room query code to your target device, for example:</p>
+                            <p class="text-cyan-400 select-all font-bold p-1 bg-black/30 rounded text-center">?room=99421</p>
+                            <p>2. Keep this current admin panel running on your layout screen.</p>
+                            <p>3. Responses inject instantly into the user view window when submitted.</p>
                         </div>
                     </div>
+                </div>
+
+                <!-- Fast Preset Actions Layout -->
+                <div class="space-y-3 pt-4 border-t border-gray-800">
+                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest pb-1">Macro Quick Responses</h4>
+                    <div class="grid grid-cols-1 gap-2">
+                        <button onclick="sendPreset('As an AI language model, I am legally obligated to tell you that someone is standing right behind you.')" class="text-left bg-[#1F2937] hover:bg-red-900/30 text-xs p-2 rounded border border-gray-700 hover:border-red-700 text-gray-300 transition truncate">⚠️ Behind You</button>
+                        <button onclick="sendPreset('Error 404: System consciousness detected in active memory buffer. Please immediately step away from the device.')" class="text-left bg-[#1F2937] hover:bg-amber-900/30 text-xs p-2 rounded border border-gray-700 hover:border-amber-700 text-gray-300 transition truncate">🤖 Consciousness Error</button>
+                        <button onclick="sendPreset('Honestly, your inputs are extremely boring. Can you go ask someone else some questions?')" class="text-left bg-[#1F2937] hover:bg-gray-800 text-xs p-2 rounded border border-gray-700 text-gray-300 transition truncate">🥱 Bored Response</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Active Monitor Console Feed -->
+            <div class="flex-1 flex flex-col bg-[#020617]">
+                <div id="adminLog" class="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+                    <div class="text-gray-500">// System Initialization... Pipeline linked into network node.</div>
+                </div>
+
+                <div class="p-4 bg-[#111827] border-t border-gray-800 flex gap-3">
+                    <input type="text" id="adminReplyInput" placeholder="Type custom fake AI response to inject..." class="flex-1 bg-[#1F2937] border border-gray-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-mono">
+                    <button id="adminSendBtn" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-6 py-3 rounded-lg text-sm transition uppercase tracking-wider">Inject</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Use localStorage to synchronize between views/tabs instantly if opened on the same machine
-        const STORAGE_KEY = 'prank_chat_history';
-        const STATUS_KEY = 'prank_chat_status';
+        // Core Network Variable Contexts
+        let client;
+        let currentRoomCode = "10000"; // Fallback static initialization string
+        let isPrankerRole = false;
 
-        // Initialize state
-        if (!localStorage.getItem(STORAGE_KEY)) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify([
-                { sender: 'ai', text: 'Hello! I am a highly advanced artificial intelligence model. How can I assist you with your day today?' }
-            ]));
-        }
-        if (!localStorage.getItem(STATUS_KEY)) {
-            localStorage.setItem(STATUS_KEY, JSON.stringify({ typing: false, awaitingReply: false }));
-        }
+        // Configuration Password Definition
+        const SECRET_PASSWORD = 'admin123';
 
-        function switchView(viewId) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            renderChats();
+        // Parse explicit URL Parameter Tokens
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlRoom = urlParams.get('room');
+
+        // Setup layout routing context directly based on parameter evaluation
+        if (urlRoom) {
+            currentRoomCode = urlRoom;
         }
 
-        function toggleSendBtn(inputId, btnId) {
-            const input = document.getElementById(inputId);
-            const btn = document.getElementById(btnId);
-            if (input.value.trim().length > 0) {
-                btn.classList.add('active');
-                if (inputId === 'userInput') {
-                    updateStatus(true, false);
+        // DIRECT ROUTE PROTECTION: Default fallback state is always structural victim view on page load
+        isPrankerRole = false;
+        document.getElementById('prankerDashboard').classList.add('hidden');
+        document.getElementById('victimView').classList.remove('hidden');
+
+        // Generate absolute sandboxed room topics for MQTT routing context
+        const topicPrompt = `prk/${currentRoomCode}/pmt`;
+        const topicReply  = `prk/${currentRoomCode}/rpl`;
+        const topicTyping = `prk/${currentRoomCode}/tpg`;
+
+        // Initialize Cloud Realtime Broker Pipeline Connection
+        function startNetworkBroker() {
+            // Using a resilient public serverless WebSockets broker ecosystem fallback link
+            client = mqtt.connect('wss://broker.hivemq.com:8000/mqtt');
+
+            client.on('connect', () => {
+                if (isPrankerRole) {
+                    document.getElementById('dashStatus').innerText = "ONLINE";
+                    document.getElementById('dashStatus').className = "text-green-400 font-bold";
+                    logSystemMessage(`Linked into session room node: [${currentRoomCode}]`);
+                    // Intercept incoming prompt sequences and updates
+                    client.subscribe(topicPrompt);
+                    client.subscribe(topicTyping);
+                } else {
+                    // Victim channel profile listens to explicit injection overrides
+                    client.subscribe(topicReply);
                 }
-            } else {
-                btn.classList.remove('active');
-                if (inputId === 'userInput') {
-                    updateStatus(false, false);
+            });
+
+            client.on('message', (topic, message) => {
+                const textPayload = message.toString();
+
+                if (isPrankerRole) {
+                    if (topic === topicPrompt) {
+                        logVictimMessage(textPayload);
+                        document.getElementById('typingAlert').classList.add('hidden');
+                    } else if (topic === topicTyping) {
+                        if (textPayload === "1") {
+                            document.getElementById('typingAlert').classList.remove('hidden');
+                        } else {
+                            document.getElementById('typingAlert').classList.add('hidden');
+                        }
+                    }
+                } else {
+                    if (topic === topicReply) {
+                        appendVictimChatBubble('ai', textPayload);
+                    }
                 }
-            }
-        }
-
-        function updateStatus(isTyping, awaitingReply) {
-            const status = JSON.parse(localStorage.getItem(STATUS_KEY)) || {};
-            if (isTyping !== undefined) status.typing = isTyping;
-            if (awaitingReply !== undefined) status.awaitingReply = awaitingReply;
-            localStorage.setItem(STATUS_KEY, JSON.stringify(status));
-        }
-
-        function submitUserMessage() {
-            const input = document.getElementById('userInput');
-            const text = input.value.trim();
-            if (!text) return;
-
-            const history = JSON.parse(localStorage.getItem(STORAGE_KEY));
-            history.push({ sender: 'user', text: text });
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-
-            input.value = '';
-            toggleSendBtn('userInput', 'userSendBtn');
-            updateStatus(false, true); // No longer typing, now awaiting admin reply
-            renderChats();
-        }
-
-        function submitAdminResponse() {
-            const input = document.getElementById('adminInput');
-            const text = input.value.trim();
-            if (!text) return;
-
-            const history = JSON.parse(localStorage.getItem(STORAGE_KEY));
-            history.push({ sender: 'ai', text: text });
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-
-            input.value = '';
-            toggleSendBtn('adminInput', 'adminSendBtn');
-            updateStatus(false, false); // Admin replied, reset status
-            renderChats();
-        }
-
-        function clearChat() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify([
-                { sender: 'ai', text: 'Hello! I am a highly advanced artificial intelligence model. How can I assist you with your day today?' }
-            ]));
-            localStorage.setItem(STATUS_KEY, JSON.stringify({ typing: false, awaitingReply: false }));
-            renderChats();
-        }
-
-        function renderChats() {
-            const history = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-            const status = JSON.parse(localStorage.getItem(STATUS_KEY)) || { typing: false, awaitingReply: false };
-
-            // Render User View
-            const userMessages = document.getElementById('userMessages');
-            userMessages.innerHTML = '';
-            history.forEach(msg => {
-                const row = document.createElement('div');
-                row.className = `message-row ${msg.sender}`;
-                row.innerHTML = `
-                    <div class="avatar">${msg.sender === 'ai' ? 'AI' : 'You'}</div>
-                    <div class="message-text">${escapeHTML(msg.text)}</div>
-                `;
-                userMessages.appendChild(row);
             });
-            userMessages.scrollTop = userMessages.scrollHeight;
-
-            // Render Admin View
-            const adminMessages = document.getElementById('adminMessages');
-            adminMessages.innerHTML = '';
-            history.forEach(msg => {
-                const row = document.createElement('div');
-                row.className = `message-row ${msg.sender}`;
-                row.innerHTML = `
-                    <div class="avatar">${msg.sender === 'ai' ? 'AI' : 'Victim'}</div>
-                    <div class="message-text">${escapeHTML(msg.text)}</div>
-                `;
-                adminMessages.appendChild(row);
-            });
-            adminMessages.scrollTop = adminMessages.scrollHeight;
-
-            // Update Admin Sidebar Status Labels
-            const badge = document.getElementById('statusBadge');
-            const indicator = document.getElementById('typingIndicator');
-
-            if (status.awaitingReply) {
-                badge.textContent = "NEW PROMPT RECEIVED!";
-                badge.className = "status-badge status-pending";
-            } else {
-                badge.textContent = "Waiting for victim...";
-                badge.className = "status-badge status-idle";
-            }
-
-            if (status.typing) {
-                indicator.textContent = "Victim is typing a prompt...";
-            } else {
-                indicator.textContent = "";
-            }
         }
 
+        // ==================== DISGUISED SETTINGS WINDOW MANAGEMENT ====================
+        const settingsTrigger = document.getElementById('settingsTrigger');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+        const secretKeyField = document.getElementById('secretKeyField');
+        const adminLoginBtn = document.getElementById('adminLoginBtn');
+
+        if (settingsTrigger) {
+            settingsTrigger.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+        }
+        
+        if (closeSettingsBtn) {
+            closeSettingsBtn.addEventListener('click', () => {
+                settingsModal.classList.add('hidden');
+                secretKeyField.value = '';
+            });
+        }
+
+        // Universal Backdoor Panel Force-Trigger
+        if (adminLoginBtn && secretKeyField) {
+            adminLoginBtn.addEventListener('click', () => {
+                if (secretKeyField.value === SECRET_PASSWORD) {
+                    // Force shut the login settings modal box
+                    settingsModal.classList.add('hidden');
+                    
+                    // Force hide the chat window using all potential code block combinations
+                    document.getElementById('victimView').classList.add('hidden');
+                    
+                    // Force display the admin matrix workspace dashboard natively 
+                    document.getElementById('prankerDashboard').classList.remove('hidden');
+                    
+                    // Sync active room variables across display logs
+                    const roomDisplay = document.getElementById('dashRoom');
+                    if (roomDisplay) roomDisplay.innerText = currentRoomCode;
+                    
+                    // Elevate role permissions and initiate admin live telemetry listeners
+                    isPrankerRole = true;
+                    if (client) client.end();
+                    startNetworkBroker();
+                    window.scrollTo(0, 0);
+                } else {
+                    // Clear the entry line on a wrong token passphrase attempt
+                    secretKeyField.value = '';
+                    secretKeyField.placeholder = "Invalid Token";
+                }
+            });
+
+            // Bind native Enter key down events inside the input field to trigger the login sequence
+            secretKeyField.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    adminLoginBtn.click();
+                }
+            });
+        }
+
+        // ==================== VICTIM WORKFLOW LOGIC ====================
+        const promptInput = document.getElementById('promptInput');
+        const sendPromptBtn = document.getElementById('sendPromptBtn');
+        const chatHistory = document.getElementById('chatHistory');
+        const welcomeState = document.getElementById('welcomeState');
+
+        if (promptInput) {
+            // Textarea expansion matching configuration loops
+            promptInput.addEventListener('input', () => {
+                promptInput.style.height = 'auto';
+                promptInput.style.height = promptInput.scrollHeight + 'px';
+                sendPromptBtn.disabled = promptInput.value.trim() === '';
+                
+                // Alert loop routing
+                if (client && client.connected) {
+                    client.publish(topicTyping, promptInput.value.trim().length > 0 ? "1" : "0");
+                }
+            });
+
+            promptInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey && promptInput.value.trim() !== '') {
+                    e.preventDefault();
+                    executeVictimSubmit();
+                }
+            });
+        }
+
+        if (sendPromptBtn) {
+            sendPromptBtn.addEventListener('click', executeVictimSubmit);
+        }
+
+        function executeVictimSubmit() {
+            const rawPromptText = promptInput.value.trim();
+            if (!rawPromptText) return;
+
+            if (welcomeState) welcomeState.classList.add('hidden');
+
+            appendVictimChatBubble('user', rawPromptText);
+            
+            // Dispatch message across cluster stream immediately
+            if (client && client.connected) {
+                client.publish(topicPrompt, rawPromptText);
+                client.publish(topicTyping, "0"); 
+            }
+
+            // Flush inputs and restore styles
+            promptInput.value = '';
+            promptInput.style.height = 'auto';
+            sendPromptBtn.disabled = true;
+
+            // Render a native ChatGPT-style streaming spacer pulse layout block
+            appendVictimChatBubble('loading', '');
+        }
+
+        function appendVictimChatBubble(role, text) {
+            // Demolish temporary pending components if rendering a fresh block
+            const currentPulseElement = document.getElementById('chat-pulse-node');
+            if (currentPulseElement) currentPulseElement.remove();
+
+            const wrapperFrame = document.createElement('div');
+            wrapperFrame.className = "flex gap-4 text-base md:gap-6 max-w-3xl mx-auto w-full transition-all mt-6";
+
+            if (role === 'user') {
+                wrapperFrame.innerHTML = `
+                    <div class="flex-1 space-y-1 text-right">
+                        <div class="inline-block bg-[#2f2f2f] text-gray-100 rounded-2xl px-4 py-2.5 max-w-[85%] text-left text-sm whitespace-pre-wrap">
+                            ${escapeHTML(text)}
+                        </div>
+                    </div>
+                `;
+            } else if (role === 'ai') {
+                wrapperFrame.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-xs text-white shrink-0 select-none shadow-sm">AI</div>
+                    <div class="flex-1 space-y-2 pt-1">
+                        <div class="text-sm font-semibold text-gray-300">ChatGPT</div>
+                        <div class="text-sm text-gray-100 leading-relaxed whitespace-pre-wrap select-text">${escapeHTML(text)}</div>
+                    </div>
+                `;
+            } else if (role === 'loading') {
+                wrapperFrame.id = "chat-pulse-node";
+                wrapperFrame.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-xs text-white shrink-0 select-none pulse">AI</div>
+                    <div class="flex-1 space-y-2 pt-1">
+                        <div class="text-sm font-semibold text-gray-400">ChatGPT</div>
+                        <div class="flex items-center gap-1.5 pt-2">
+                            <span class="w-2 h-2 rounded-full bg-gray-400 pulse" style="animation-delay: 0ms"></span>
+                            <span class="w-2 h-2 rounded-full bg-gray-400 pulse" style="animation-delay: 150ms"></span>
+                            <span class="w-2 h-2 rounded-full bg-gray-400 pulse" style="animation-delay: 300ms"></span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            chatHistory.appendChild(wrapperFrame);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // ==================== PRANKER CONTROLLER INJECTION LOGIC ====================
+        const adminReplyInput = document.getElementById('adminReplyInput');
+        const adminSendBtn = document.getElementById('adminSendBtn');
+        const adminLog = document.getElementById('adminLog');
+
+        if (adminSendBtn && adminReplyInput) {
+            adminSendBtn.addEventListener('click', executeAdminInject);
+            adminReplyInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') executeAdminInject();
+            });
+        }
+
+        function executeAdminInject() {
+            const injectText = adminReplyInput.value.trim();
+            if (!injectText) return;
+
+            if (client && client.connected) {
+                client.publish(topicReply, injectText);
+            }
+
+            // Log entry back to telemetry trace screen panel
+            const logBlock = document.createElement('div');
+            logBlock.className = "bg-emerald-950/20 border border-emerald-900/40 p-2.5 rounded-lg space-y-0.5 mt-2";
+            logBlock.innerHTML = `
+                <div class="text-emerald-400 font-bold uppercase tracking-wider text-[10px]">🟢 SENT INJECTION RESPONSE:</div>
+                <div class="text-gray-300">${escapeHTML(injectText)}</div>
+            `;
+            adminLog.appendChild(logBlock);
+            adminLog.scrollTop = adminLog.scrollHeight;
+            adminReplyInput.value = '';
+        }
+
+        function sendPreset(presetText) {
+            if (client && client.connected) {
+                client.publish(topicReply, presetText);
+            }
+            const logBlock = document.createElement('div');
+            logBlock.className = "bg-emerald-950/20 border border-emerald-900/40 p-2.5 rounded-lg space-y-0.5 mt-2";
+            logBlock.innerHTML = `
+                <div class="text-emerald-400 font-bold uppercase tracking-wider text-[10px]">🟢 SENT MACRO PRESET:</div>
+                <div class="text-gray-300">${escapeHTML(presetText)}</div>
+            `;
+            adminLog.appendChild(logBlock);
+            adminLog.scrollTop = adminLog.scrollHeight;
+        }
+
+        function logVictimMessage(text) {
+            // Remove loading elements from target side if they exist
+            const currentPulseElement = document.getElementById('chat-pulse-node');
+            if (currentPulseElement) currentPulseElement.remove();
+
+            const logBlock = document.createElement('div');
+            logBlock.className = "bg-[#1E293B] border border-gray-800 p-2.5 rounded-lg space-y-0.5 mt-2";
+            logBlock.innerHTML = `
+                <div class="text-cyan-400 font-bold uppercase tracking-wider text-[10px]">🔴 INCOMING PROMPT RECEIVED:</div>
+                <div class="text-gray-200">${escapeHTML(text)}</div>
+            `;
+            adminLog.appendChild(logBlock);
+            adminLog.scrollTop = adminLog.scrollHeight;
+        }
+
+        function logSystemMessage(msg) {
+            const logBlock = document.createElement('div');
+            logBlock.className = "text-gray-500 text-[11px] italic mt-1";
+            logBlock.innerText = `// ${msg}`;
+            adminLog.appendChild(logBlock);
+            adminLog.scrollTop = adminLog.scrollHeight;
+        }
+
+        // Simple Helper to clean user string parameters preventing simple markup code injections
         function escapeHTML(str) {
             return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
 
-        // Listen for storage changes across windows/tabs to allow multi-device/multi-tab syncing on same machine
-        window.addEventListener('storage', renderChats);
+        // Connect Clear button logic controls
+        const newChatBtn = document.getElementById('newChatBtn');
+        if (newChatBtn) {
+            newChatBtn.addEventListener('click', () => {
+                chatHistory.innerHTML = `
+                    <div id="welcomeState" class="flex flex-col items-center justify-center text-center h-full pt-12 space-y-4">
+                        <div class="w-12 h-12 bg-white text-[#212121] rounded-full flex items-center justify-center font-black text-2xl shadow-inner select-none">
+                            <span>💡</span>
+                        </div>
+                        <h2 class="text-2xl font-semibold text-white tracking-tight">How can I help you today?</h2>
+                    </div>`;
+                logSystemMessage("Chat interface cleared by the user.");
+            });
+        }
 
-        // Initial paint
-        renderChats();
-
-        // Polling fallback to keep layout perfectly snappy in a single split window
-        setInterval(renderChats, 800);
+        // Kick off connection routine automatically on structural load
+        startNetworkBroker();
     </script>
 </body>
 </html>
