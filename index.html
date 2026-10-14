@@ -64,6 +64,7 @@
                     <span class="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] uppercase tracking-[0.18em] text-gray-300">
                         Room <span id="roomBadge">10000</span>
                     </span>
+                    <span class="px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] uppercase tracking-[0.14em] text-amber-200">Offline demo</span>
                 </div>
             </div>
 
@@ -247,6 +248,17 @@
                     <div class="text-gray-500">// System Initialization... Pipeline linked into network node.</div>
                 </div>
 
+                <details class="border-t border-gray-800 bg-[#0F172A]">
+                    <summary class="cursor-pointer px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5">Offline response helper</summary>
+                    <div id="draftHelperHistory" class="max-h-32 overflow-y-auto px-4 py-2 space-y-2 text-xs" aria-live="polite">
+                        <div class="text-gray-500">Ask for help composing a longer response. Drafts stay local until you inject them.</div>
+                    </div>
+                    <div class="flex gap-2 p-3 pt-0">
+                        <input type="text" id="draftHelperInput" placeholder="What should the reply cover?" class="min-w-0 flex-1 bg-[#1F2937] border border-gray-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-cyan-500 text-white font-mono">
+                        <button id="draftHelperSendBtn" type="button" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg text-xs transition">Draft</button>
+                    </div>
+                </details>
+
                 <div class="p-4 bg-[#111827] border-t border-gray-800 flex gap-3">
                     <input type="text" id="adminReplyInput" placeholder="Type custom fake AI response to inject..." class="flex-1 bg-[#1F2937] border border-gray-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-mono">
                     <button id="adminSendBtn" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-6 py-3 rounded-lg text-sm transition uppercase tracking-wider">Inject</button>
@@ -294,6 +306,20 @@
         const topicReset = `rst`;
         const roomChannel = `prk/${currentRoomCode}`;
         const seenMessageIds = new Set();
+        let offlineReplyTimer = null;
+        let offlineReplyCount = 0;
+        const offlineTangentResponses = [
+            'A small tangent: does cereal count as soup, or does breakfast get its own rules?',
+            'A small tangent: how many pockets would the ideal jacket have before it becomes a filing cabinet?',
+            'A small tangent: does a straw have one hole or two? The answer feels suspiciously important.',
+            'A small tangent: is a staircase just a very committed indoor hill?',
+            'A small tangent: would a round pancake taste different if it were a hexagon?',
+            'A small tangent: which way should the toilet paper roll face? This may be the most enduring design debate.',
+            'A small tangent: do mugs need handles, or are handles just tiny mug balconies?',
+            'A small tangent: if you add one page to a book, does it become a slightly different book?',
+            'A small tangent: how many buttons can a coat have before it becomes a wearable control panel?',
+            'A small tangent: what would a spoon choose to do on its day off?'
+        ];
 
         function syncRoomBadge() {
             const roomBadge = document.getElementById('roomBadge');
@@ -307,6 +333,77 @@
                 return window.crypto.randomUUID();
             }
             return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        }
+
+        function clearOfflineReplyTimer() {
+            if (offlineReplyTimer) {
+                clearTimeout(offlineReplyTimer);
+                offlineReplyTimer = null;
+            }
+        }
+
+        function scheduleOfflineReply(prompt) {
+            clearOfflineReplyTimer();
+            offlineReplyTimer = setTimeout(() => {
+                offlineReplyTimer = null;
+                const response = createOfflineReply(prompt);
+                appendVictimChatBubble('ai', response);
+            }, 7000);
+        }
+
+        function createOfflineReply(prompt) {
+            const text = String(prompt || '').trim();
+            const normalized = text.toLowerCase();
+
+            if (offlineReplyCount >= 2 || text.split(/\s+/).length < 3) {
+                offlineReplyCount = 0;
+                const tangentIndex = Math.floor(Math.random() * offlineTangentResponses.length);
+                return offlineTangentResponses[tangentIndex];
+            }
+            offlineReplyCount += 1;
+
+            if (/^image creation request:/i.test(text)) {
+                return `This offline demo cannot generate an image yet. Your image idea was: "${text.replace(/^image creation request:\s*/i, '')}". An operator can add an image from the control page.`;
+            }
+
+            if (/^(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(normalized)) {
+                return 'Hi! What would you like to work on? I can help with a quick calculation or think through a question.';
+            }
+
+            const arithmetic = normalized.match(/^(?:what is\s+)?(-?\d+(?:\.\d+)?)\s*([+*/-])\s*(-?\d+(?:\.\d+)?)\??$/);
+            if (arithmetic) {
+                const first = Number(arithmetic[1]);
+                const second = Number(arithmetic[3]);
+                const operations = {
+                    '+': first + second,
+                    '-': first - second,
+                    '*': first * second,
+                    '/': second === 0 ? null : first / second
+                };
+                const result = operations[arithmetic[2]];
+                return result === null
+                    ? 'Division by zero is undefined. Try a different divisor.'
+                    : `${first} ${arithmetic[2]} ${second} = ${Number(result.toFixed(6))}.`;
+            }
+
+            if (/\b(thank you|thanks)\b/.test(normalized)) {
+                return 'You are welcome. If you want to keep going, send another question and I will do my best with the offline demo.';
+            }
+
+            if (/\b(joke|make me laugh)\b/.test(normalized)) {
+                return 'Why did the spreadsheet go to therapy? It had too many unresolved cells.';
+            }
+
+            if (/\b(what|why|how|explain|help)\b/.test(normalized)) {
+                return `I can help you think through "${text}". Start by identifying the main goal, then separate what you know from what you still need to find out. Which part would you like to focus on first?`;
+            }
+
+            return `I hear you: "${text}". A useful next step is to clarify what outcome you want, then look at the details that could change the answer. What part should we tackle first?`;
+        }
+
+        function createOfflineDraft(prompt) {
+            const subject = String(prompt || '').trim();
+            return `Here is a longer draft you can edit:\n\nThanks for bringing up ${subject}. The main point is to be clear about what matters most and why. One practical way to approach it is to break the question into smaller parts, check any assumptions, and compare a couple of reasonable options.\n\nBased on that, I would suggest starting with the simplest next step and adjusting once you have more context. If there is a specific detail you want addressed, we can make the response more precise.`;
         }
 
         function enableNotificationAudio() {
@@ -403,6 +500,7 @@
                     if (payload.startsWith('__think__')) {
                         appendVictimChatBubble('thinking', payload.replace('__think__', ''));
                     } else if (payload.startsWith('__image__')) {
+                        clearOfflineReplyTimer();
                         try {
                             const image = JSON.parse(payload.slice('__image__'.length));
                             if (typeof image.dataUrl === 'string' && image.dataUrl.startsWith('data:image/')) {
@@ -412,6 +510,8 @@
                             console.warn('Could not display incoming image:', error);
                         }
                     } else {
+                        clearOfflineReplyTimer();
+                        offlineReplyCount = 0;
                         appendVictimChatBubble('ai', payload);
                     }
                 } else if (topic === topicReset) {
@@ -508,6 +608,8 @@
         }
 
         function resetVictimChatUI() {
+            clearOfflineReplyTimer();
+            offlineReplyCount = 0;
             chatHistory.innerHTML = `
                 <div id="welcomeState" class="flex flex-col items-center justify-center text-center h-full pt-12 space-y-4">
                     <div class="w-12 h-12 bg-white text-[#212121] rounded-full flex items-center justify-center font-black text-2xl shadow-inner select-none">
@@ -666,6 +768,7 @@
             promptInput.style.height = 'auto';
             sendPromptBtn.disabled = true;
             appendVictimChatBubble('loading', '');
+            scheduleOfflineReply(rawPromptText);
         }
 
         function executeImageCreation() {
@@ -683,6 +786,7 @@
             promptInput.style.height = 'auto';
             sendPromptBtn.disabled = true;
             appendVictimChatBubble('thinking', 'Generating image...');
+            scheduleOfflineReply(`Image creation request: ${imagePrompt}`);
         }
 
         function appendVictimChatBubble(role, text, options = {}) {
@@ -716,7 +820,7 @@
                 wrapperFrame.innerHTML = `
                     <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-xs text-white shrink-0 select-none shadow-sm">AI</div>
                     <div class="flex-1 space-y-2 pt-1">
-                        <div class="text-sm font-semibold text-gray-300">ChatGPT</div>
+                        <div class="text-sm font-semibold text-gray-300">Offline demo assistant</div>
                         <div class="text-sm text-gray-100 leading-relaxed whitespace-pre-wrap select-text">${escapeHTML(text)}</div>
                     </div>
                 `;
@@ -781,6 +885,53 @@
         const adminSendBtn = document.getElementById('adminSendBtn');
         const adminLog = document.getElementById('adminLog');
         const testPingBtn = document.getElementById('testPingBtn');
+        const draftHelperInput = document.getElementById('draftHelperInput');
+        const draftHelperSendBtn = document.getElementById('draftHelperSendBtn');
+        const draftHelperHistory = document.getElementById('draftHelperHistory');
+
+        function addDraftHelperMessage(role, text, draft = false) {
+            const message = document.createElement('div');
+            message.className = role === 'user'
+                ? 'ml-8 rounded-lg bg-[#1F2937] p-2 text-gray-200 whitespace-pre-wrap'
+                : 'mr-4 rounded-lg border border-gray-700 bg-[#111827] p-2 text-gray-300 whitespace-pre-wrap';
+
+            const label = document.createElement('div');
+            label.className = 'mb-1 text-[10px] font-bold uppercase tracking-wider text-cyan-400';
+            label.textContent = role === 'user' ? 'You' : 'Offline draft helper';
+            const content = document.createElement('div');
+            content.textContent = text;
+            message.append(label, content);
+
+            if (draft) {
+                const useButton = document.createElement('button');
+                useButton.type = 'button';
+                useButton.className = 'mt-2 rounded border border-gray-600 px-2 py-1 text-[10px] text-gray-200 hover:bg-white/10';
+                useButton.textContent = 'Use draft in reply box';
+                useButton.addEventListener('click', () => {
+                    adminReplyInput.value = text;
+                    adminReplyInput.focus();
+                });
+                message.appendChild(useButton);
+            }
+
+            draftHelperHistory.appendChild(message);
+            draftHelperHistory.scrollTop = draftHelperHistory.scrollHeight;
+        }
+
+        function submitDraftHelperRequest() {
+            const request = draftHelperInput.value.trim();
+            if (!request) return;
+            addDraftHelperMessage('user', request);
+            addDraftHelperMessage('assistant', createOfflineDraft(request), true);
+            draftHelperInput.value = '';
+        }
+
+        if (draftHelperSendBtn && draftHelperInput && draftHelperHistory) {
+            draftHelperSendBtn.addEventListener('click', submitDraftHelperRequest);
+            draftHelperInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') submitDraftHelperRequest();
+            });
+        }
 
         if (testPingBtn) {
             testPingBtn.addEventListener('click', () => {
