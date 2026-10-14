@@ -248,17 +248,6 @@
                     <div class="text-gray-500">// System Initialization... Pipeline linked into network node.</div>
                 </div>
 
-                <details class="border-t border-gray-800 bg-[#0F172A]">
-                    <summary class="cursor-pointer px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-300 hover:bg-white/5">Offline response helper</summary>
-                    <div id="draftHelperHistory" class="max-h-32 overflow-y-auto px-4 py-2 space-y-2 text-xs" aria-live="polite">
-                        <div class="text-gray-500">Ask for help composing a longer response. Drafts stay local until you inject them.</div>
-                    </div>
-                    <div class="flex gap-2 p-3 pt-0">
-                        <input type="text" id="draftHelperInput" placeholder="What should the reply cover?" class="min-w-0 flex-1 bg-[#1F2937] border border-gray-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-cyan-500 text-white font-mono">
-                        <button id="draftHelperSendBtn" type="button" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg text-xs transition">Draft</button>
-                    </div>
-                </details>
-
                 <div class="p-4 bg-[#111827] border-t border-gray-800 flex gap-3">
                     <input type="text" id="adminReplyInput" placeholder="Type custom fake AI response to inject..." class="flex-1 bg-[#1F2937] border border-gray-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 text-white font-mono">
                     <button id="adminSendBtn" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-6 py-3 rounded-lg text-sm transition uppercase tracking-wider">Inject</button>
@@ -348,7 +337,7 @@
                 offlineReplyTimer = null;
                 const response = createOfflineReply(prompt);
                 appendVictimChatBubble('ai', response);
-            }, 7000);
+            }, 30000);
         }
 
         function createOfflineReply(prompt) {
@@ -399,11 +388,6 @@
             }
 
             return `I hear you: "${text}". A useful next step is to clarify what outcome you want, then look at the details that could change the answer. What part should we tackle first?`;
-        }
-
-        function createOfflineDraft(prompt) {
-            const subject = String(prompt || '').trim();
-            return `Here is a longer draft you can edit:\n\nThanks for bringing up ${subject}. The main point is to be clear about what matters most and why. One practical way to approach it is to break the question into smaller parts, check any assumptions, and compare a couple of reasonable options.\n\nBased on that, I would suggest starting with the simplest next step and adjusting once you have more context. If there is a specific detail you want addressed, we can make the response more precise.`;
         }
 
         function enableNotificationAudio() {
@@ -885,53 +869,6 @@
         const adminSendBtn = document.getElementById('adminSendBtn');
         const adminLog = document.getElementById('adminLog');
         const testPingBtn = document.getElementById('testPingBtn');
-        const draftHelperInput = document.getElementById('draftHelperInput');
-        const draftHelperSendBtn = document.getElementById('draftHelperSendBtn');
-        const draftHelperHistory = document.getElementById('draftHelperHistory');
-
-        function addDraftHelperMessage(role, text, draft = false) {
-            const message = document.createElement('div');
-            message.className = role === 'user'
-                ? 'ml-8 rounded-lg bg-[#1F2937] p-2 text-gray-200 whitespace-pre-wrap'
-                : 'mr-4 rounded-lg border border-gray-700 bg-[#111827] p-2 text-gray-300 whitespace-pre-wrap';
-
-            const label = document.createElement('div');
-            label.className = 'mb-1 text-[10px] font-bold uppercase tracking-wider text-cyan-400';
-            label.textContent = role === 'user' ? 'You' : 'Offline draft helper';
-            const content = document.createElement('div');
-            content.textContent = text;
-            message.append(label, content);
-
-            if (draft) {
-                const useButton = document.createElement('button');
-                useButton.type = 'button';
-                useButton.className = 'mt-2 rounded border border-gray-600 px-2 py-1 text-[10px] text-gray-200 hover:bg-white/10';
-                useButton.textContent = 'Use draft in reply box';
-                useButton.addEventListener('click', () => {
-                    adminReplyInput.value = text;
-                    adminReplyInput.focus();
-                });
-                message.appendChild(useButton);
-            }
-
-            draftHelperHistory.appendChild(message);
-            draftHelperHistory.scrollTop = draftHelperHistory.scrollHeight;
-        }
-
-        function submitDraftHelperRequest() {
-            const request = draftHelperInput.value.trim();
-            if (!request) return;
-            addDraftHelperMessage('user', request);
-            addDraftHelperMessage('assistant', createOfflineDraft(request), true);
-            draftHelperInput.value = '';
-        }
-
-        if (draftHelperSendBtn && draftHelperInput && draftHelperHistory) {
-            draftHelperSendBtn.addEventListener('click', submitDraftHelperRequest);
-            draftHelperInput.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter') submitDraftHelperRequest();
-            });
-        }
 
         if (testPingBtn) {
             testPingBtn.addEventListener('click', () => {
