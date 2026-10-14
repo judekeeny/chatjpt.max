@@ -380,9 +380,10 @@
 
             if (isPrankerRole) {
                 if (topic === topicPrompt) {
-                    logVictimMessage(payload);
+                    const typingAlert = document.getElementById('typingAlert');
                     playIncomingPing();
-                    document.getElementById('typingAlert')?.classList.add('hidden');
+                    logVictimMessage(payload);
+                    typingAlert?.classList.add('hidden');
                 } else if (topic === topicTyping) {
                     const typingAlert = document.getElementById('typingAlert');
                     if (payload === '1') {
